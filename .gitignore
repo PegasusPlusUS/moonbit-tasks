@@ -1,0 +1,8 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+package-lock.json
+eslint.config.mjs
+.vscode-test.mjs

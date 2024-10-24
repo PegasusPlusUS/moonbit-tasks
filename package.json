@@ -1,0 +1,90 @@
+{
+  "name": "moonbit-tasks",
+  "displayName": "Moonbit Tasks",
+  "description": "Add contributed tasks for moonbit",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Moonbit tasks Settings",
+      "properties": {
+        "myExtension.moonPath": {
+          "type": "string",
+          "default": "${workspaceFolder}",
+          "description": "Set the directory for moon"
+        },
+        "myExtension.scanSubdirectoryForProject": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan subdirectory for project"
+        }
+      }
+    },
+    "taskDefinitions": [
+        {
+            "type": "moon",
+            "required": ["script"],
+            "properties": {
+                "script": {
+                    "type": "string",
+                    "description": "moonbit: moon build"
+                }
+            }
+        }
+    ],
+    "tasks": [
+      {
+          "label": "myTaskType",
+          "type": "myTaskType",
+          "task": "run",
+          "command": "myTaskType",
+          "args": ["Hello from custom task 1!"],
+          "group": "myTaskType"
+      },
+      {
+          "label": "moonbit test task",
+          "type": "shell",
+          "task": "run",
+          "command": "moon test",
+          "args": ["Hello from moonbit test task 2!"],
+          "group": "build"
+      },
+      {
+          "label": "moonbit build task",
+          "type": "shell",
+          "task": "run",
+          "command": "moon build",
+          "args": ["Hello from moonbit build task!"],
+          "group": "build"
+      }
+    ]
+  },
+    "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.94.0",
+    "@types/mocha": "^10.0.9",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.10.0",
+    "@typescript-eslint/parser": "^8.7.0",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.3",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  },
+  "publisher": "PegasusCadence"
+}
