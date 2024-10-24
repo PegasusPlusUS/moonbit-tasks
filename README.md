@@ -30,4 +30,12 @@ Users appreciate release notes as you update your extension.
 
 ### 0.0.1
 
-Initial release of moonbit tasks
+Initial release of moonbit tasks - 'build', 'test'
+
+### 0.0.2
+
+- Add icon, 'run src/main'
+
+### 0.0.3
+
+- undo web extension entrypoint

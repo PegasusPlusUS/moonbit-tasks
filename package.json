@@ -2,10 +2,13 @@
   "name": "moonbit-tasks",
   "displayName": "Moonbit Tasks",
   "description": "Add contributed tasks for moonbit",
-  "version": "0.0.1",
+  "publisher": "PegasusCadence",
+  "version": "0.0.3",
+  "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.94.0"
   },
+  "repository": "https://github.com/pegasusplusus/moonbit-tasks.git",
   "categories": [
     "Other"
   ],
@@ -29,45 +32,53 @@
       }
     },
     "taskDefinitions": [
-        {
-            "type": "moon",
-            "required": ["script"],
-            "properties": {
-                "script": {
-                    "type": "string",
-                    "description": "moonbit: moon build"
-                }
-            }
+      {
+        "type": "moon",
+        "required": [
+          "script"
+        ],
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "moonbit: moon build"
+          }
         }
+      }
     ],
     "tasks": [
       {
-          "label": "myTaskType",
-          "type": "myTaskType",
-          "task": "run",
-          "command": "myTaskType",
-          "args": ["Hello from custom task 1!"],
-          "group": "myTaskType"
+        "label": "myTaskType",
+        "type": "myTaskType",
+        "task": "run",
+        "command": "myTaskType",
+        "args": [
+          "Hello from custom task 1!"
+        ],
+        "group": "myTaskType"
       },
       {
-          "label": "moonbit test task",
-          "type": "shell",
-          "task": "run",
-          "command": "moon test",
-          "args": ["Hello from moonbit test task 2!"],
-          "group": "build"
+        "label": "moonbit test task",
+        "type": "shell",
+        "task": "run",
+        "command": "moon test",
+        "args": [
+          "Hello from moonbit test task 2!"
+        ],
+        "group": "build"
       },
       {
-          "label": "moonbit build task",
-          "type": "shell",
-          "task": "run",
-          "command": "moon build",
-          "args": ["Hello from moonbit build task!"],
-          "group": "build"
+        "label": "moonbit build task",
+        "type": "shell",
+        "task": "run",
+        "command": "moon build",
+        "args": [
+          "Hello from moonbit build task!"
+        ],
+        "group": "build"
       }
     ]
   },
-    "scripts": {
+  "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
@@ -76,15 +87,14 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.94.0",
     "@types/mocha": "^10.0.9",
     "@types/node": "20.x",
+    "@types/vscode": "^1.94.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.7.0",
-    "eslint": "^9.13.0",
-    "typescript": "^5.6.3",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
-  },
-  "publisher": "PegasusCadence"
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.13.0",
+    "typescript": "^5.6.3"
+  }
 }

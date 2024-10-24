@@ -56,6 +56,7 @@ async function getCustomTasks(): Promise<vscode.Task[]> {
 				createTask(folderPath, 'build', vscode.TaskGroup.Build);
 				createTask(folderPath, 'test', vscode.TaskGroup.Test);
 				createTask(folderPath, 'clean', vscode.TaskGroup.Clean);
+				createTask(folderPath, 'run src/main', vscode.TaskGroup.Build);
 			}
 		} catch (error) {
 			//vscode.window.showWarningMessage(`File "${signatureFileName}" does not exist in ${folderUri.fsPath}`);
