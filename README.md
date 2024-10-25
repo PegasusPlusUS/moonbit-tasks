@@ -34,8 +34,14 @@ Initial release of moonbit tasks - 'build', 'test'
 
 ### 0.0.2
 
-- Add icon, 'run src/main'
+Add icon, 'run src/main'
 
 ### 0.0.3
 
-- undo web extension entrypoint
+Undo web extension entrypoint
+
+### 0.0.4
+
+Add smart tasks view in explorer view
+
+Build, Test, Run, Clean, Fmt, Coverage

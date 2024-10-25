@@ -8,7 +8,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Initial release
 
-- 'build', 'test'
+- 'build', 'test', 'clean'
 
 ## 0.0.2
 
@@ -16,4 +16,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## 0.0.3
 
-- undo web extension entrypoint
+- Undo web extension entrypoint
+
+## 0.0.4
+
+- Add smart tasks view in explorer view
+
+- Build, Test, Run, Clean, Fmt, Coverage

@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add contributed tasks for moonbit",
   "publisher": "PegasusCadence",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.94.0"
@@ -40,22 +40,12 @@
         "properties": {
           "script": {
             "type": "string",
-            "description": "moonbit: moon build"
+            "description": "moonbit: moon tasks"
           }
         }
       }
     ],
     "tasks": [
-      {
-        "label": "myTaskType",
-        "type": "myTaskType",
-        "task": "run",
-        "command": "myTaskType",
-        "args": [
-          "Hello from custom task 1!"
-        ],
-        "group": "myTaskType"
-      },
       {
         "label": "moonbit test task",
         "type": "shell",
@@ -75,6 +65,24 @@
           "Hello from moonbit build task!"
         ],
         "group": "build"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "mySmartTasksCustomView",
+          "name": "Smart Tasks"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "mySmartTasksCustomView.refresh",
+        "title": "Refresh My Smart Tasks View"
+      },
+      {
+        "command": "moonbit-tasks.onViewItemClick",
+        "title": "On View Item Click"
       }
     ]
   },
