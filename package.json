@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add contributed tasks for moonbit",
   "publisher": "PegasusCadence",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.94.0"
@@ -12,19 +12,19 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["workspaceContains:**/Cargo.toml"],
   "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "type": "object",
       "title": "Moonbit tasks Settings",
       "properties": {
-        "myExtension.moonPath": {
+        "moonbit-tasks.moonPath": {
           "type": "string",
           "default": "${workspaceFolder}",
           "description": "Set the directory for moon"
         },
-        "myExtension.scanSubdirectoryForProject": {
+        "moonbit-tasks.scanSubdirectoryForProject": {
           "type": "boolean",
           "default": true,
           "description": "Scan subdirectory for project"
@@ -52,7 +52,7 @@
         "task": "run",
         "command": "moon test",
         "args": [
-          "Hello from moonbit test task 2!"
+          "Hello from moonbit test task!"
         ],
         "group": "build"
       },

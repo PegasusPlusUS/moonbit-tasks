@@ -45,3 +45,7 @@ Undo web extension entrypoint
 Add smart tasks view in explorer view
 
 Build, Test, Run, Clean, Fmt, Coverage
+
+### 0.0.5
+
+Cangjie, Rust, Go, Gleam, Nim, Zig, Maven support
