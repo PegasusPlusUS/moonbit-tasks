@@ -204,13 +204,30 @@ async function smartTaskRun(cmd: string) {
 				// Get the workspace folders
 				const workspaceFolders = vscode.workspace.workspaceFolders;
 				if (workspaceFolders) {
-					// Check each workspace folder to see if the file is in it
-					const rootDir = workspaceFolders.find(folder => {
-						const folderPath = folder.uri.fsPath;
-						return fileDir.startsWith(folderPath);  // Check if the file is within this folder
+					// Check each workspace folder to see if the file is in it and keep the folder that has maximum length
+					let rootDir: vscode.WorkspaceFolder | undefined = undefined;
+					const firstFoundRootDir = workspaceFolders.find(folder => {
+						return false;
+						//const folderPath = folder.uri.fsPath;
+						//return fileDir.startsWith(folderPath);  // Check if the file is within this folder
 					});
-
-					if (rootDir && rootDir.uri.fsPath.length > 0) {
+					rootDir = firstFoundRootDir;
+					let maxPathLength = 0;
+					//let maxPathRoot: vscode.WorkspaceFolder | undefined = undefined;
+					workspaceFolders.forEach(folder => {
+						const pathLength = folder.uri.fsPath.length;
+						if (fileDir.startsWith(folder.uri.fsPath) && pathLength > maxPathLength) {
+							//maxPathRoot = folder;
+							maxPathLength = pathLength;
+							//rootDir = maxPathRoot;
+							rootDir = folder;
+						}
+					});
+					// if (maxPathRoot !== undefined && maxPathRoot !== null) {
+					// 	rootDir = firstFoundRootDir;
+					// 	//rootDir = maxPathRoot; // ? maxPathRoot : undefined;
+					// }
+					if (rootDir !== undefined && rootDir !== null && rootDir.uri.fsPath.length > 0) {
 						handler = await smartGetProjectPath(rootDir.uri.fsPath);
 						if (handlerInfo.isValid(handler)) {
 							projectDir = rootDir.uri.fsPath;
