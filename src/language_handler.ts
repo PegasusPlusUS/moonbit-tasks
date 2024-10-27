@@ -1,7 +1,7 @@
-
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { promises as fsPromises } from 'fs';
+import * as fs from 'fs';
 
 function isValidString(str: string | undefined | null): boolean {
     return str !== undefined && str !== null && str.trim().length > 0;
@@ -50,6 +50,18 @@ class handlerInfo {
 	static notValid(h: handlerInfo | undefined) : boolean {
 		return !this.isValid(h);
 	}
+
+	toJSON(): object {
+		return {
+			signatureFileName : this.signatureFileName,
+			projectManagerCmd : this.projectManagerCmd ? this.projectManagerCmd : null,
+			macroHandler : this.macroHandler ? this.macroHandler : null,
+		};
+	}
+
+	static fromJSON(json: any): handlerInfo {
+		return new handlerInfo(json.signatureFileName, json.projectManagerCmd, json.macroHandler);
+	}
 }
 
 // One signature might have several handler, and there might be multiple signature files in the same dir for several handlerss
@@ -59,25 +71,58 @@ class handlerInfo {
 //macro_set is (macro, value)
 let languageHandlerMap: Map<string, handlerInfo> = new Map();
 function initHandlerMap() {
-	// ToDo: read from setting
-	const myMap: Map<string, handlerInfo> = new Map([
-		['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
-		['Rust', new handlerInfo('Cargo.toml', 'cargo', undefined)],
-		['Nim', new handlerInfo('*.nimble', 'nimble', undefined)],
-		['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', undefined)],
-		['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
-		['Gleam', new handlerInfo('gleam.toml', 'gleam', undefined)],
-		['Go', new handlerInfo('go.mod', 'go', undefined)],
-		['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
-		['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
-		['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],]))],
-		['TypeScript', new handlerInfo('tsconfig.json', 'tsc', undefined)],
-	]);	
-	myMap.forEach((value, key) => {
-		languageHandlerMap.set(key, value);
-	});
+	// Try load definition, if none, init default
+	loadLanguageDefinition();
+	if (languageHandlerMap !== undefined && languageHandlerMap != null && languageHandlerMap.size > 0) {
+	}
+	else {
+		const myMap: Map<string, handlerInfo> = new Map([
+			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
+			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
+			['Nim', new handlerInfo('*.nimble', 'nimble', undefined)],
+			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', undefined)],
+			['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
+			['Gleam', new handlerInfo('gleam.toml', 'gleam', undefined)],
+			['Go', new handlerInfo('go.mod', 'go', undefined)],
+			['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
+			['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
+			['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],]))],
+			['TypeScript', new handlerInfo('tsconfig.json', 'tsc', undefined)],
+		]);
+
+		myMap.forEach((value, key) => {
+			languageHandlerMap.set(key, value);
+		});
+
+		vscode.window.showInformationMessage('Using default language definition.');
+
+		saveHandlerMap();
+	}
 }
 
+const languageHandlerDefFileName = 'languageHandler.json';
+//const userMapFilePath = path.join(context.extensionPath, languageHandlerDefFileName);
+async function loadLanguageDefinition() {
+    try {
+        const json = await fsPromises.readFile(languageHandlerDefFileName, 'utf8');
+        const mapObject = JSON.parse(json);
+        languageHandlerMap = new Map<string, handlerInfo>(Object.entries(mapObject));
+    } catch(e) {
+        vscode.window.showInformationMessage(`Load language definition from ${languageHandlerDefFileName} failed: ${e}`);
+	}
+}
+
+async function saveHandlerMap() {
+	const mapToObject = Object.fromEntries(languageHandlerMap);
+	const json = JSON.stringify(mapToObject, null, 2);
+	
+	try {
+		await fsPromises.writeFile(path.join(__dirname, languageHandlerDefFileName), json);
+	}
+	catch(e) {
+		vscode.window.showInformationMessage(`Save language definition to ${languageHandlerDefFileName} failed: ${e}`);
+	}
+}
 
 let myTerminal: vscode.Terminal | undefined;
 
@@ -158,18 +203,59 @@ async function smartSearchProjectRoot(fileDir: string, sigFileName: string): Pro
 async function smartGetProjectPath(fileDir: string): Promise<handlerInfo | undefined> {
 	if (fileDir.length > 0) {
 		for (let [languageName, cmdHandler] of languageHandlerMap) {
-			if (handlerInfo.isValid(cmdHandler)) {
-				const targetFilePath = path.join(fileDir, cmdHandler.signatureFileName);
+			if (handlerInfo.isValid(cmdHandler) && isValidString(cmdHandler.signatureFileName)) {
+				let fSigFileFound = false;
 				try {
-					await fsPromises.access(targetFilePath);
+					if (cmdHandler.signatureFileName[0] != '*') {
+						const targetFilePath = path.join(fileDir, cmdHandler.signatureFileName);
+						await fsPromises.access(targetFilePath);
+						fSigFileFound = true;
+					}
+					else {
+						fSigFileFound = await searchFilesByExtension(fileDir, cmdHandler.signatureFileName);
+					}
+				}
+				catch (e) {
+					vscode.window.showWarningMessage(`Search for project signature file failed: ${e}`);
+				}
+
+				if (fSigFileFound) {
 					return cmdHandler;
-				} catch (_) {
 				}
 			}
 		}
 	}
 
 	return undefined;
+}
+
+/// Just search files within a dir, no subdir yet
+/// extensions can be written as '*.nimble|*.json|*.csproj'
+async function searchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
+	// const extensionExp = '*.a|*.b|*.c';
+	const extensions = extensionExp.split('|').map(item => item.slice(1));
+	
+	try {
+		let files = await fsPromises.readdir(folderPath);
+		for (const file of files) {
+			const fullPath = path.join(folderPath, file);
+			const stats = await fsPromises.stat(fullPath);
+			if (stats.isDirectory()) {
+				// Recursive search if needed
+			}
+			else {
+				for (let ext of extensions) {
+					if (file.endsWith(ext))
+						return true;
+				}				
+			}
+		}
+	}
+	catch(e) {
+		vscode.window.showWarningMessage(`Search signature files by extension failed: ${e}`);
+	}
+
+	return false;
 }
 
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task 
@@ -185,10 +271,30 @@ async function smartTaskRun(cmd: string) {
 		const fileDir = require('path').dirname(filePath);  // Get the directory of the current file
 		try {
 			for (let [_languageName, cmdHandler] of languageHandlerMap) {
-				if (handlerInfo.isValid(cmdHandler) && cmdHandler.signatureFileName == path.basename(activeEditor.document.fileName)) {
-					projectDir = fileDir;
-					handler = cmdHandler;
-					break;
+				// *.nimble
+				if (handlerInfo.isValid(cmdHandler) && isValidString(cmdHandler.signatureFileName)) {
+					let fSigFileFound = false;
+					if (cmdHandler.signatureFileName[0] !== '*') {
+						fSigFileFound = cmdHandler.signatureFileName == path.basename(activeEditor.document.fileName);
+					}
+					else {
+						const extensions = cmdHandler.signatureFileName.split('|').map(item => item.slice(1));
+						for (let ext of extensions) {
+							if (path.basename(activeEditor.document.fileName).endsWith(ext)) {
+								fSigFileFound = true;
+								break;
+							}
+						}
+
+						// extension search will be done at stage 2. First stage just check current active file
+						//fSigFileFound = await searchFilesByExtension(fileDir, cmdHandler.signatureFileName);
+					}
+
+					if (fSigFileFound) {
+						projectDir = fileDir;
+						handler = cmdHandler;
+						break;
+					}
 				}
 			}
 

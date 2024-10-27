@@ -56,3 +56,8 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 					if (rootDir !== undefined && rootDir !== null && rootDir.uri.fsPath.length > 0) {
 
 ```
+
+## 0.0.7
+
+- Nim (*.nimble) project file support
+
