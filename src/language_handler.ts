@@ -79,7 +79,7 @@ function initHandlerMap() {
 		const myMap: Map<string, handlerInfo> = new Map([
 			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
 			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
-			['Nim', new handlerInfo('*.nimble', 'nimble', undefined)],
+			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
 			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', undefined)],
 			['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
 			['Gleam', new handlerInfo('gleam.toml', 'gleam', undefined)],
@@ -94,7 +94,7 @@ function initHandlerMap() {
 			languageHandlerMap.set(key, value);
 		});
 
-		vscode.window.showInformationMessage('Using default language definition.');
+		//vscode.window.showInformationMessage('Using default language definition.');
 
 		saveHandlerMap();
 	}
@@ -108,7 +108,9 @@ async function loadLanguageDefinition() {
         const mapObject = JSON.parse(json);
         languageHandlerMap = new Map<string, handlerInfo>(Object.entries(mapObject));
     } catch(e) {
-        vscode.window.showInformationMessage(`Load language definition from ${languageHandlerDefFileName} failed: ${e}`);
+		if (!`${e}`.startsWith('Error: ENOENT')) {
+	        vscode.window.showInformationMessage(`Load language definition from ${languageHandlerDefFileName} failed: ${e}`);
+		}
 	}
 }
 
@@ -126,79 +128,79 @@ async function saveHandlerMap() {
 
 let myTerminal: vscode.Terminal | undefined;
 
-async function searchForSignatureFile(fileDir: string, backOrForward: boolean, sigFileName: string): Promise<string> {
-	let projectDir = "";
-	if (fileDir.length > 0) {
-		const targetFilePath = path.join(fileDir, sigFileName);
-		try {
-			await fsPromises.access(targetFilePath);
-			projectDir = fileDir;
-		} catch (_) {
-			if (backOrForward) {
-				const parentDir = path.dirname(fileDir);
-				try {
-					projectDir = await searchForSignatureFile(parentDir, true, sigFileName);
-				} catch (_) {
-				}
-			}
-			else {
-				try {
-					// Get the contents of the workspace folder
-					const folderUri = vscode.Uri.from({scheme: 'file', path: fileDir})
-					const contents = await vscode.workspace.fs.readDirectory(folderUri);
+// async function searchForSignatureFile(fileDir: string, backOrForward: boolean, sigFileName: string): Promise<string> {
+// 	let projectDir = "";
+// 	if (fileDir.length > 0) {
+// 		const targetFilePath = path.join(fileDir, sigFileName);
+// 		try {
+// 			await fsPromises.access(targetFilePath);
+// 			projectDir = fileDir;
+// 		} catch (_) {
+// 			if (backOrForward) {
+// 				const parentDir = path.dirname(fileDir);
+// 				try {
+// 					projectDir = await searchForSignatureFile(parentDir, true, sigFileName);
+// 				} catch (_) {
+// 				}
+// 			}
+// 			else {
+// 				try {
+// 					// Get the contents of the workspace folder
+// 					const folderUri = vscode.Uri.from({scheme: 'file', path: fileDir})
+// 					const contents = await vscode.workspace.fs.readDirectory(folderUri);
 	
-					// Iterate through each item and check if it's a directory
-					for (const [name, type] of contents) {
-						if (type === vscode.FileType.Directory) {
-							const subdirPath = path.join(fileDir, name);
-							try {
-								projectDir = await searchForSignatureFile(subdirPath, false, sigFileName);
-								if (projectDir.length > 0) {
-									break;
-								}
-							} catch (_) {
-							}
-						}
-					}
-				} catch (_) {
-				}	
-			}
-		}
-	}
+// 					// Iterate through each item and check if it's a directory
+// 					for (const [name, type] of contents) {
+// 						if (type === vscode.FileType.Directory) {
+// 							const subdirPath = path.join(fileDir, name);
+// 							try {
+// 								projectDir = await searchForSignatureFile(subdirPath, false, sigFileName);
+// 								if (projectDir.length > 0) {
+// 									break;
+// 								}
+// 							} catch (_) {
+// 							}
+// 						}
+// 					}
+// 				} catch (_) {
+// 				}	
+// 			}
+// 		}
+// 	}
 
-	return projectDir;
-}
+// 	return projectDir;
+// }
 
-async function smartSearchProjectRoot(fileDir: string, sigFileName: string): Promise<string> {
-	// Get the workspace folders
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	let projectDir = "";
+// async function smartSearchProjectRoot(fileDir: string, sigFileName: string): Promise<string> {
+// 	// Get the workspace folders
+// 	const workspaceFolders = vscode.workspace.workspaceFolders;
+// 	let projectDir = "";
 
-	if (workspaceFolders) {
-		// Check each workspace folder to see if the file is in it
-		const rootDir = workspaceFolders.find(folder => {
-			const folderPath = folder.uri.fsPath;
-			return fileDir.startsWith(folderPath);  // Check if the file is within this folder
-		});
+// 	if (workspaceFolders) {
+// 		// Check each workspace folder to see if the file is in it
+// 		const rootDir = workspaceFolders.find(folder => {
+// 			const folderPath = folder.uri.fsPath;
+// 			return fileDir.startsWith(folderPath);  // Check if the file is within this folder
+// 		});
 
-		if (rootDir) {
-            try {
-				projectDir = await searchForSignatureFile(rootDir.uri.fsPath, false, sigFileName);
-            } catch (err) {
-                vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
-			}
-		} else {
-			// locate signature file from current to parent
-			try {
-				projectDir = await searchForSignatureFile(fileDir, true, sigFileName);
-			} catch (err) {
-                vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
-			}
-		}
-	}
+// 		if (rootDir) {
+//             try {
+// 				projectDir = await searchForSignatureFile(rootDir.uri.fsPath, false, sigFileName);
+//             } catch (err) {
+//                 vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
+// 			}
+// 		} else {
+// 			// locate signature file from current to parent
+// 			try {
+// 				projectDir = await searchForSignatureFile(fileDir, true, sigFileName);
+// 			} catch (err) {
+//                 vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
+// 			}
+// 		}
+// 	}
 
-	return projectDir;
-}
+// 	return projectDir;
+// }
 
 async function smartGetProjectPath(fileDir: string): Promise<handlerInfo | undefined> {
 	if (fileDir.length > 0) {
@@ -216,7 +218,10 @@ async function smartGetProjectPath(fileDir: string): Promise<handlerInfo | undef
 					}
 				}
 				catch (e) {
-					vscode.window.showWarningMessage(`Search for project signature file failed: ${e}`);
+					//const fsErr = e as fs.FileError
+					if (!`${e}`.startsWith('Error: ENOENT')) {
+						vscode.window.showWarningMessage(`Search for project signature file failed: ${e}`);
+					}
 				}
 
 				if (fSigFileFound) {
@@ -252,7 +257,9 @@ async function searchFilesByExtension(folderPath: string, extensionExp: string):
 		}
 	}
 	catch(e) {
-		vscode.window.showWarningMessage(`Search signature files by extension failed: ${e}`);
+		if (!`${e}`.startsWith('Error: ENOENT')) {
+			vscode.window.showWarningMessage(`Search signature files by extension failed: ${e}`);
+		}
 	}
 
 	return false;
@@ -268,7 +275,7 @@ async function smartTaskRun(cmd: string) {
 	const activeEditor = vscode.window.activeTextEditor;
 	if (activeEditor) {
 		const filePath = activeEditor.document.uri.fsPath;
-		const fileDir = require('path').dirname(filePath);  // Get the directory of the current file
+		const fileDir = path.dirname(filePath);  // Get the directory of the current file
 		try {
 			for (let [_languageName, cmdHandler] of languageHandlerMap) {
 				// *.nimble
@@ -299,17 +306,36 @@ async function smartTaskRun(cmd: string) {
 			}
 
 			if (handlerInfo.notValid(handler)) {
-				handler = await smartGetProjectPath(fileDir);
-                if (handlerInfo.isValid(handler)) {
-    				projectDir = fileDir;
-                }
+				let currentFolder = fileDir;
+				while(true) {
+					handler = await smartGetProjectPath(currentFolder);
+					if (handlerInfo.isValid(handler)) {
+						projectDir = currentFolder;
+					}
+					else {
+						const parentFolder = path.dirname(currentFolder);
+						if (parentFolder.length < currentFolder.length) {
+							const workspaceFolders = vscode.workspace.workspaceFolders;
+							if (workspaceFolders !== undefined && workspaceFolders !== null) {
+								const firstFoundRootDir = workspaceFolders.find(folder => {
+									return parentFolder.startsWith(folder.uri.fsPath);  // Check if the file is within this folder
+								});
+								if (firstFoundRootDir !== undefined) {
+									currentFolder = parentFolder;
+									continue;
+								}
+							}
+						}
+					}
+					break;
+				}
 			}
 
 			if (handlerInfo.notValid(handler)) {
 				// The root path that contain current document
 				// Get the workspace folders
 				const workspaceFolders = vscode.workspace.workspaceFolders;
-				if (workspaceFolders) {
+				if (workspaceFolders !== undefined && workspaceFolders !== null) {
 					// Check each workspace folder to see if the file is in it and keep the folder that has maximum length
 					let rootDir: vscode.WorkspaceFolder | undefined = undefined;
 					const firstFoundRootDir = workspaceFolders.find(folder => {
