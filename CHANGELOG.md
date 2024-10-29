@@ -68,3 +68,9 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Also search in parent folders for project file when current dir or active fold in workspace dir can't find project file
 
   1. Active file; 2. Active path; 3. Active parent paths chain (within workspace); 4. Root folders of workspace 
+
+## 0.0.9
+
+- Async load language def
+
+- Check, Update

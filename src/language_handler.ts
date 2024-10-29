@@ -70,7 +70,7 @@ class handlerInfo {
 //command_set is (command, option_set)
 //macro_set is (macro, value)
 let languageHandlerMap: Map<string, handlerInfo> = new Map();
-function initHandlerMap() {
+async function initHandlerMap() {
 	// Try load definition, if none, init default
 	loadLanguageDefinition();
 	if (languageHandlerMap !== undefined && languageHandlerMap != null && languageHandlerMap.size > 0) {
@@ -79,10 +79,10 @@ function initHandlerMap() {
 		const myMap: Map<string, handlerInfo> = new Map([
 			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
 			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
-			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
+			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['run', 'run'], ['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
 			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', undefined)],
 			['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
-			['Gleam', new handlerInfo('gleam.toml', 'gleam', undefined)],
+			['Gleam', new handlerInfo('gleam.toml', 'gleam', new Map<string, string>([['run', 'run'], ['fmt', 'format']]))],
 			['Go', new handlerInfo('go.mod', 'go', undefined)],
 			['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
 			['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
@@ -96,7 +96,7 @@ function initHandlerMap() {
 
 		//vscode.window.showInformationMessage('Using default language definition.');
 
-		saveHandlerMap();
+		await saveHandlerMap();
 	}
 }
 
@@ -397,9 +397,25 @@ async function smartTaskRun(cmd: string) {
 	}
 }
 
+
 function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
+	function getShellPath(): string {
+		const os = require("os");
+		if (os.platform() === 'win32') {
+			return 'cmd.exe';
+		} else if (os.platform() === 'darwin') {
+			return '/bin/zsh';
+		} else {
+			return '/bin/bash';
+		}
+	}
+
 	if (!myTerminal || myTerminal.exitStatus) {
-		myTerminal = vscode.window.createTerminal('Moonbit tasks Terminal');
+		myTerminal = vscode.window.createTerminal({
+			name:'Moonbit-tasks extention Terminal',
+			shellPath:getShellPath(),
+			iconPath:new vscode.ThemeIcon('tools')
+		});
 	}
 
 	myTerminal.show();  // Show the terminal
@@ -565,11 +581,13 @@ export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
     getChildren(element?: MyTreeItem): Thenable<MyTreeItem[]> {
         return Promise.resolve([
 			new MyTreeItem('Build', 'moonbit-tasks.onViewItemClick'),
+			new MyTreeItem('Check', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Test', 'moonbit-tasks.onViewItemClick'),
+			new MyTreeItem('Coverage', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Run', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Clean', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Fmt', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Coverage', 'moonbit-tasks.onViewItemClick'),
+			new MyTreeItem('Update', 'moonbit-tasks.onViewItemClick'),
 		]);
     }
 
