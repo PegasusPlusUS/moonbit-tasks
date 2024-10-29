@@ -74,3 +74,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Async load language def
 
 - Check, Update
+
+## 0.0.10
+
+- Terminal shell/icon
