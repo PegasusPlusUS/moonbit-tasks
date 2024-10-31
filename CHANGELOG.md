@@ -88,3 +88,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ## 0.11.4
 
 - Language definition save/load fix, monitoring change to reload
+
+## 0.11.5
+
+- Language definition in setting, monitoring change

@@ -5,6 +5,57 @@ import * as fs from 'fs';
 
 import * as helper from './helper'
 
+let configChangeListener: vscode.Disposable | undefined;
+let extensionContext: vscode.ExtensionContext | undefined; // Store context for later use
+
+export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context; // Save the context for later use
+	
+	asyncInitLangDef();
+}
+
+const configNameLangDef = "moonbit-tasks.languageHandlerDef";
+
+function startWatchingLangDefChanges() {
+    // Check if listener already exists, if so, dispose it
+    if (configChangeListener) {
+        configChangeListener.dispose();
+    }
+
+    // Start watching for configuration changes
+    configChangeListener = vscode.workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration(configNameLangDef)) {
+            vscode.window.showInformationMessage("Language handler def has changed, reloading...");
+			asyncLoadLangDef();
+        }
+    });
+
+    // Push the new listener to the context's subscriptions
+    extensionContext?.subscriptions.push(configChangeListener);
+
+    fs.unwatchFile(fullFilePathNameLangDef);
+	fs.watchFile(fullFilePathNameLangDef, (curr, prev) => {
+		if (curr.mtime !== prev.mtime) {
+			vscode.window.showInformationMessage('Language definition has changed, reloading...');
+			asyncLoadLangDef();
+		}
+	});
+}
+
+export function deactivate() {
+    // Stop watching for configuration changes if needed
+    stopWatchingLangDefChanges();
+}
+
+// Example function to stop watching
+function stopWatchingLangDefChanges() {
+    configChangeListener?.dispose();
+    configChangeListener = undefined; // Clear the reference
+
+	fs.unwatchFile(fullFilePathNameLangDef);
+}
+
+/// using macro to build cmd, pwd, actFile, ^ etc
 function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
 	return cmdStr;
 }
@@ -50,7 +101,7 @@ export class handlerInfo {
 			signatureFileName : this.signatureFileName,
 			projectManagerCmd : helper.isValidString(this.projectManagerCmd) ? this.projectManagerCmd : null,
 			//macroHandler : helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
-            macroHandler : this.macroHandler ? Object.fromEntries(this.macroHandler) : null
+            macroHandler : this.macroHandler && helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
 		};
 	}
 
@@ -65,17 +116,16 @@ export class handlerInfo {
 //command_set is (command, option_set)
 //macro_set is (macro, value)
 export let languageHandlerMap: Map<string, handlerInfo> = new Map();
-export async function initHandlerMap() {
+async function asyncInitLangDef() {
 	// Try load definition, if none, init default
 	try {
-		await loadLanguageDefinition();
+		await asyncLoadLangDef();
 	}
 	catch(e) {
 		vscode.window.showInformationMessage(`Load language definition failed: ${e}`);
 	}
-	if (languageHandlerMap !== undefined && languageHandlerMap != null && languageHandlerMap.size > 0) {
-	}
-	else {
+
+	if (!helper.isValidMap(languageHandlerMap)) {
 		const myMap: Map<string, handlerInfo> = new Map([
 			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
 			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
@@ -95,40 +145,53 @@ export async function initHandlerMap() {
 			languageHandlerMap.set(key, value);
 		});
 		// do not wait here
-		saveHandlerMap();
+		asyncSaveLangDef();
 	}
 }
 
-const languageHandlerDefFileName = 'languageHandler.json';
-const filePathLangDef = path.join(__dirname, languageHandlerDefFileName)
-//const userMapFilePath = path.join(context.extensionPath, languageHandlerDefFileName);
-async function loadLanguageDefinition() {
+const fileNameLangDef = 'languageHandler.json';
+const fullFilePathNameLangDef = path.join(__dirname, fileNameLangDef);
+
+async function asyncLoadLangDefFromFile(): Promise<string> {
     try {
-        const json = await fsPromises.readFile(filePathLangDef, 'utf8');
-        languageHandlerMap = deserializeLanguageHandlerMap(json);
+        const jsonLangDef = await fsPromises.readFile(fullFilePathNameLangDef, 'utf8')
+		return jsonLangDef;
     } catch(e) {
 		if (!`${e}`.startsWith('Error: ENOENT')) {
-	        vscode.window.showInformationMessage(`Load language definition from ${languageHandlerDefFileName} failed: ${e}`);
+	        vscode.window.showInformationMessage(`Load language definition from ${fileNameLangDef} failed: ${e}`);
 		}
 	}
 
-    fs.unwatchFile(filePathLangDef);
-	fs.watchFile(filePathLangDef, (curr, prev) => {
-		if (curr.mtime !== prev.mtime) {
-			vscode.window.showInformationMessage('Language definition has changed, reloading...');
-			loadLanguageDefinition();
-		}
-	});	
+	return Promise.reject();
 }
 
-async function saveHandlerMap() {
-	const json = serializeLanguageHandlerMap(languageHandlerMap);
+async function asyncSaveLangDefToFile(jsonLangDef: string) {
 	try {
-		await fsPromises.writeFile(filePathLangDef, json);
+		await fsPromises.writeFile(fullFilePathNameLangDef, jsonLangDef);
 	}
 	catch(e) {
-		vscode.window.showInformationMessage(`Save language definition to ${languageHandlerDefFileName} failed: ${e}`);
+		vscode.window.showInformationMessage(`Save language definition to ${fullFilePathNameLangDef} failed: ${e}`);
 	}
+}
+
+const langDefInFileOrSetting = false;
+
+//const userMapFilePath = path.join(context.extensionPath, languageHandlerDefFileName);
+async function asyncLoadLangDef() {
+	const jsonLangDef = langDefInFileOrSetting
+		? await asyncLoadLangDefFromFile()
+		: vscode.workspace.getConfiguration(configNameLangDef).get<string>("json");
+
+	languageHandlerMap = deserializeLanguageHandlerMap(`${jsonLangDef}`);
+	startWatchingLangDefChanges();
+}
+
+async function asyncSaveLangDef() {
+	stopWatchingLangDefChanges();
+	const jsonLangDef = serializeLanguageHandlerMap(languageHandlerMap);
+	langDefInFileOrSetting
+		? await asyncSaveLangDefToFile(jsonLangDef)
+		: vscode.workspace.getConfiguration(configNameLangDef).update("json", jsonLangDef);
 }
 
 function serializeLanguageHandlerMap(map: Map<string, handlerInfo>): string {

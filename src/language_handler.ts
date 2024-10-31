@@ -202,7 +202,6 @@ async function smartTaskRun(cmd: string) {
 	}
 }
 
-
 function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 	function getShellPath(): string {
 		const os = require("os");
@@ -242,13 +241,17 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 	}
 }
 
-export function initExtension(context: vscode.ExtensionContext) {
-	langDef.initHandlerMap();
+export function active(context: vscode.ExtensionContext) {
+	langDef.activate(context)
 	registerTaskProvider(context);
 	registerTreeView(context);
 
 	// Command handler for clicking on a view item
 	registerClickHandler(context);
+}
+
+export function deactivate() {
+	langDef.deactivate();
 }
 
 async function getCustomTasks(): Promise<vscode.Task[]> {
@@ -314,7 +317,6 @@ async function getCustomTasks(): Promise<vscode.Task[]> {
 		}
 	}
 }
-
 
 function registerClickHandler(context: vscode.ExtensionContext) {
     const clickHandler = vscode.commands.registerCommand('moonbit-tasks.onViewItemClick', async (item: MyTreeItem) => {

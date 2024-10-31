@@ -3,7 +3,9 @@ import * as mbTaskExt from './language_handler';
 import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
-	mbTaskExt.initExtension(context);
+	mbTaskExt.active(context);
 }
 
-export function deactivate() {}
+export function deactivate() {
+	mbTaskExt.deactivate();
+}
