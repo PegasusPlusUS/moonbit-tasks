@@ -1,211 +1,16 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { promises as fsPromises } from 'fs';
-import * as fs from 'fs';
 
-function isValidString(str: string | undefined | null): boolean {
-    return str !== undefined && str !== null && str.trim().length > 0;
-}
-
-function isValidMap<K, V>(map: Map<K, V> | undefined | null): boolean {
-    return map !== undefined && map !== null && map.size > 0;
-}
-
-function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
-	return cmdStr;
-}
-
-//interface handlerInfo {
-class handlerInfo {
-	signatureFileName : string;
-	projectManagerCmd ?: string;
-	macroHandler ?: Map<string, string>;
-	constructor(sigFileName: string, projectManager: string | undefined, cmdHandler: Map<string, string> | undefined) {
-		this.signatureFileName = sigFileName;
-		this.projectManagerCmd = projectManager;
-		this.macroHandler = cmdHandler;
-	}
-
-	getFullCmd(cmdType: string) : string | undefined {
-		cmdType = cmdType.toLowerCase();
-		let macroedCmd = cmdMacroHandler(this.macroHandler?.get(cmdType));
-		if (!isValidString(macroedCmd)) {
-            if (cmdType == 'run') {
-                cmdType = 'run src/main'
-            }
-            else if (cmdType == 'coverage') {
-                cmdType = `test --enable-coverage; moon coverage report`
-            }
-            return this.projectManagerCmd + " " + cmdType;
-		}
-		else {
-			return this.projectManagerCmd + " " + macroedCmd;
-		}
-	}
-
-	static isValid(h: handlerInfo | undefined) : boolean {
-		return h !== undefined && h !== null;
-	}
-
-	static notValid(h: handlerInfo | undefined) : boolean {
-		return !this.isValid(h);
-	}
-
-	toJSON(): object {
-		return {
-			signatureFileName : this.signatureFileName,
-			projectManagerCmd : this.projectManagerCmd ? this.projectManagerCmd : null,
-			macroHandler : this.macroHandler ? this.macroHandler : null,
-		};
-	}
-
-	static fromJSON(json: any): handlerInfo {
-		return new handlerInfo(json.signatureFileName, json.projectManagerCmd, json.macroHandler);
-	}
-}
-
-// One signature might have several handler, and there might be multiple signature files in the same dir for several handlerss
-//(handler, signatureFileName)
-//(handler, command_set)
-//command_set is (command, option_set)
-//macro_set is (macro, value)
-let languageHandlerMap: Map<string, handlerInfo> = new Map();
-async function initHandlerMap() {
-	// Try load definition, if none, init default
-	loadLanguageDefinition();
-	if (languageHandlerMap !== undefined && languageHandlerMap != null && languageHandlerMap.size > 0) {
-	}
-	else {
-		const myMap: Map<string, handlerInfo> = new Map([
-			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
-			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
-			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['run', 'run'], ['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
-			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', undefined)],
-			['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
-			['Gleam', new handlerInfo('gleam.toml', 'gleam', new Map<string, string>([['run', 'run'], ['fmt', 'format']]))],
-			['Go', new handlerInfo('go.mod', 'go', undefined)],
-			['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
-			['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
-			['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],]))],
-			['TypeScript', new handlerInfo('tsconfig.json', 'tsc', undefined)],
-		]);
-
-		myMap.forEach((value, key) => {
-			languageHandlerMap.set(key, value);
-		});
-
-		//vscode.window.showInformationMessage('Using default language definition.');
-
-		await saveHandlerMap();
-	}
-}
-
-const languageHandlerDefFileName = 'languageHandler.json';
-//const userMapFilePath = path.join(context.extensionPath, languageHandlerDefFileName);
-async function loadLanguageDefinition() {
-    try {
-        const json = await fsPromises.readFile(languageHandlerDefFileName, 'utf8');
-        const mapObject = JSON.parse(json);
-        languageHandlerMap = new Map<string, handlerInfo>(Object.entries(mapObject));
-    } catch(e) {
-		if (!`${e}`.startsWith('Error: ENOENT')) {
-	        vscode.window.showInformationMessage(`Load language definition from ${languageHandlerDefFileName} failed: ${e}`);
-		}
-	}
-}
-
-async function saveHandlerMap() {
-	const mapToObject = Object.fromEntries(languageHandlerMap);
-	const json = JSON.stringify(mapToObject, null, 2);
-	
-	try {
-		await fsPromises.writeFile(path.join(__dirname, languageHandlerDefFileName), json);
-	}
-	catch(e) {
-		vscode.window.showInformationMessage(`Save language definition to ${languageHandlerDefFileName} failed: ${e}`);
-	}
-}
+import * as helper from './helper'
+import * as langDef from './language_def'
 
 let myTerminal: vscode.Terminal | undefined;
 
-// async function searchForSignatureFile(fileDir: string, backOrForward: boolean, sigFileName: string): Promise<string> {
-// 	let projectDir = "";
-// 	if (fileDir.length > 0) {
-// 		const targetFilePath = path.join(fileDir, sigFileName);
-// 		try {
-// 			await fsPromises.access(targetFilePath);
-// 			projectDir = fileDir;
-// 		} catch (_) {
-// 			if (backOrForward) {
-// 				const parentDir = path.dirname(fileDir);
-// 				try {
-// 					projectDir = await searchForSignatureFile(parentDir, true, sigFileName);
-// 				} catch (_) {
-// 				}
-// 			}
-// 			else {
-// 				try {
-// 					// Get the contents of the workspace folder
-// 					const folderUri = vscode.Uri.from({scheme: 'file', path: fileDir})
-// 					const contents = await vscode.workspace.fs.readDirectory(folderUri);
-	
-// 					// Iterate through each item and check if it's a directory
-// 					for (const [name, type] of contents) {
-// 						if (type === vscode.FileType.Directory) {
-// 							const subdirPath = path.join(fileDir, name);
-// 							try {
-// 								projectDir = await searchForSignatureFile(subdirPath, false, sigFileName);
-// 								if (projectDir.length > 0) {
-// 									break;
-// 								}
-// 							} catch (_) {
-// 							}
-// 						}
-// 					}
-// 				} catch (_) {
-// 				}	
-// 			}
-// 		}
-// 	}
-
-// 	return projectDir;
-// }
-
-// async function smartSearchProjectRoot(fileDir: string, sigFileName: string): Promise<string> {
-// 	// Get the workspace folders
-// 	const workspaceFolders = vscode.workspace.workspaceFolders;
-// 	let projectDir = "";
-
-// 	if (workspaceFolders) {
-// 		// Check each workspace folder to see if the file is in it
-// 		const rootDir = workspaceFolders.find(folder => {
-// 			const folderPath = folder.uri.fsPath;
-// 			return fileDir.startsWith(folderPath);  // Check if the file is within this folder
-// 		});
-
-// 		if (rootDir) {
-//             try {
-// 				projectDir = await searchForSignatureFile(rootDir.uri.fsPath, false, sigFileName);
-//             } catch (err) {
-//                 vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
-// 			}
-// 		} else {
-// 			// locate signature file from current to parent
-// 			try {
-// 				projectDir = await searchForSignatureFile(fileDir, true, sigFileName);
-// 			} catch (err) {
-//                 vscode.window.showInformationMessage(`Error while checking project file: ${err}`);
-// 			}
-// 		}
-// 	}
-
-// 	return projectDir;
-// }
-
-async function smartGetProjectPath(fileDir: string): Promise<handlerInfo | undefined> {
+async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo | undefined> {
 	if (fileDir.length > 0) {
-		for (let [languageName, cmdHandler] of languageHandlerMap) {
-			if (handlerInfo.isValid(cmdHandler) && isValidString(cmdHandler.signatureFileName)) {
+		for (let [languageName, cmdHandler] of langDef.languageHandlerMap) {
+			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFileName)) {
 				let fSigFileFound = false;
 				try {
 					if (cmdHandler.signatureFileName[0] != '*') {
@@ -268,7 +73,7 @@ async function searchFilesByExtension(folderPath: string, extensionExp: string):
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task 
 async function smartTaskRun(cmd: string) {
 	let projectDir :string|undefined;
-	let handler :handlerInfo|undefined;
+	let handler :langDef.handlerInfo|undefined;
 	//let languageName :string|undefined;
 
 	// Get the current active file in the Explorer
@@ -277,9 +82,9 @@ async function smartTaskRun(cmd: string) {
 		const filePath = activeEditor.document.uri.fsPath;
 		const fileDir = path.dirname(filePath);  // Get the directory of the current file
 		try {
-			for (let [_languageName, cmdHandler] of languageHandlerMap) {
+			for (let [_languageName, cmdHandler] of langDef.languageHandlerMap) {
 				// *.nimble
-				if (handlerInfo.isValid(cmdHandler) && isValidString(cmdHandler.signatureFileName)) {
+				if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFileName)) {
 					let fSigFileFound = false;
 					if (cmdHandler.signatureFileName[0] !== '*') {
 						fSigFileFound = cmdHandler.signatureFileName == path.basename(activeEditor.document.fileName);
@@ -305,11 +110,11 @@ async function smartTaskRun(cmd: string) {
 				}
 			}
 
-			if (handlerInfo.notValid(handler)) {
+			if (langDef.handlerInfo.notValid(handler)) {
 				let currentFolder = fileDir;
 				while(true) {
 					handler = await smartGetProjectPath(currentFolder);
-					if (handlerInfo.isValid(handler)) {
+					if (langDef.handlerInfo.isValid(handler)) {
 						projectDir = currentFolder;
 					}
 					else {
@@ -331,7 +136,7 @@ async function smartTaskRun(cmd: string) {
 				}
 			}
 
-			if (handlerInfo.notValid(handler)) {
+			if (langDef.handlerInfo.notValid(handler)) {
 				// The root path that contain current document
 				// Get the workspace folders
 				const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -361,13 +166,13 @@ async function smartTaskRun(cmd: string) {
 					// }
 					if (rootDir !== undefined && rootDir !== null && rootDir.uri.fsPath.length > 0) {
 						handler = await smartGetProjectPath(rootDir.uri.fsPath);
-						if (handlerInfo.isValid(handler)) {
+						if (langDef.handlerInfo.isValid(handler)) {
 							projectDir = rootDir.uri.fsPath;
 						}
 						else {
 							for (let folder of workspaceFolders) {
 								handler = await smartGetProjectPath(folder.uri.fsPath);
-								if (handlerInfo.isValid(handler)) {
+								if (langDef.handlerInfo.isValid(handler)) {
 									projectDir = folder.uri.fsPath;
 									break;
 								}
@@ -383,7 +188,7 @@ async function smartTaskRun(cmd: string) {
 		vscode.window.showWarningMessage("No active file found.");
 	}
 
-	if (isValidString(projectDir) && handlerInfo.isValid(handler)) {
+	if (helper.isValidString(projectDir) && langDef.handlerInfo.isValid(handler)) {
 		vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
 
 		// Example shell command to be executed in the current file's directory
@@ -421,7 +226,7 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 	myTerminal.show();  // Show the terminal
 
 	// Run a shell command in the terminal
-	if (isValidString(cwd)) {
+	if (helper.isValidString(cwd)) {
 		// Need check if diectory exists?
 		myTerminal.sendText(`cd "${cwd}"`);
 	}
@@ -429,7 +234,7 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 		vscode.window.showErrorMessage("Invalid CWD for command");
 	}
 
-	if (isValidString(cmd)) {
+	if (helper.isValidString(cmd)) {
 		myTerminal.sendText(cmd?cmd:"");
 	}
 	else {
@@ -438,7 +243,7 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 }
 
 export function initExtension(context: vscode.ExtensionContext) {
-	initHandlerMap();
+	langDef.initHandlerMap();
 	registerTaskProvider(context);
 	registerTreeView(context);
 
