@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { promises as fsPromises } from 'fs';
 
-import * as helper from './helper'
-import * as langDef from './language_def'
+import * as helper from './helper';
+import * as langDef from './language_def';
 
 let myTerminal: vscode.Terminal | undefined;
 
@@ -13,7 +13,7 @@ async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo
 			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFileName)) {
 				let fSigFileFound = false;
 				try {
-					if (cmdHandler.signatureFileName[0] != '*') {
+					if (cmdHandler.signatureFileName[0] !== '*') {
 						const targetFilePath = path.join(fileDir, cmdHandler.signatureFileName);
 						await fsPromises.access(targetFilePath);
 						fSigFileFound = true;
@@ -55,8 +55,9 @@ async function searchFilesByExtension(folderPath: string, extensionExp: string):
 			}
 			else {
 				for (let ext of extensions) {
-					if (file.endsWith(ext))
+					if (file.endsWith(ext)) {
 						return true;
+					}
 				}				
 			}
 		}
@@ -242,7 +243,7 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 }
 
 export function active(context: vscode.ExtensionContext) {
-	langDef.activate(context)
+	langDef.activate(context);
 	registerTaskProvider(context);
 	registerTreeView(context);
 
