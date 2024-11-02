@@ -38,12 +38,12 @@ Also support:
   Nim (nimble)
   Zig
 Language definition within setting, can manually update, extension will reload definition automatically
-```
 
 Sample definition:
 {"Moonbit":{"signatureFileName":"moon.mod.json","projectManagerCmd":"moon","macroHandler":null},"Rust":{"signatureFileName":"Cargo.toml","projectManagerCmd":"cargo","macroHandler":{"run":"run src/main","coverage":"tarpaulin --skip-clean"}},"Nim":{"signatureFileName":"*.nimble","projectManagerCmd":"nimble","macroHandler":{"run":"run","fmt":"for /r %f in (*.nim) do ( nimpretty --backup:off %f )","coverage":"testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"}},"Cangjie":{"signatureFileName":"cjpm.toml","projectManagerCmd":"cjpm","macroHandler":{"run":"run"}},"Zig":{"signatureFileName":"build.zig.zon","projectManagerCmd":"zig","macroHandler":{"run":"run src/main.zig","test":"test src/main.zig"}},"Gleam":{"signatureFileName":"gleam.toml","projectManagerCmd":"gleam","macroHandler":{"run":"run","fmt":"format"}},"Go":{"signatureFileName":"go.mod","projectManagerCmd":"go","macroHandler":null},"Wa":{"signatureFileName":"wa.mod","projectManagerCmd":"wa","macroHandler":null},"Java":{"signatureFileName":"pom.xml","projectManagerCmd":"mvn","macroHandler":{"build":"compile"}},"Npm":{"signatureFileName":"package.json","projectManagerCmd":"npm run","macroHandler":{"build":"compile"}},"TypeScript":{"signatureFileName":"tsconfig.json","projectManagerCmd":"tsc","macroHandler":null},"Swift":{"signatureFileName":"Package.swift","projectManagerCmd":"swift","macroHandler":{"run":"run"}},"Swift":{"signatureFileName":"CMakeLists.txt","projectManagerCmd":"cmake","macroHandler":{"run":"run", "build":"-S . -B .build&& cmake --build .build", "test":"-S. -B .build&&cmake --build .build&&ctest --test-dir .build"}}}
+```
 
-Create tasks for contributed task group 'moon', to make build/test/clean etc tasks easier.
+//Create tasks for contributed task group 'moon', to make build/test/clean etc tasks easier.
 
 > Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
 
@@ -162,3 +162,9 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Update feature desctiption
 
 - cmake, google test
+
+### 0.11.8
+
+- Update definition in setting for C/C++ CMake, Google Test
+
+- Disable contributed task group in 'Terminal' -> 'Run Task...'
