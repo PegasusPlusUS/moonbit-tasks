@@ -3,10 +3,10 @@
   "displayName": "Moonbit Tasks",
   "description": "Add contributed tasks for moonbit",
   "publisher": "PegasusCadence",
-  "version": "0.11.20241103",
+  "version": "0.12.202411071",
   "icon": "images/extension-icon.png",
   "engines": {
-    "vscode": "^1.94.0"
+    "vscode": "^1.80.0"
   },
   "repository": "https://github.com/pegasusplusus/moonbit-tasks.git",
   "categories": [
@@ -102,7 +102,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.9",
     "@types/node": "22.8.1",
-    "@types/vscode": "^1.94.0",
+    "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^8.10.0",
     "@typescript-eslint/parser": "^8.7.0",
     "@vscode/test-cli": "^0.0.10",
