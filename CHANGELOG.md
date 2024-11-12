@@ -109,6 +109,10 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 - LangDef setting fix
 
-### 0.12.202411071
+## 0.12.202411071
 
 - VSC version requirement lower to 1.80, so that VSC on Mac can use this extension.
+
+## 0.12.2024111201
+
+- Update cmd handler for Zig, 'zig build run', 'zig build test'.

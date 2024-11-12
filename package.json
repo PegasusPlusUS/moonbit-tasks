@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add contributed tasks for moonbit",
   "publisher": "PegasusCadence",
-  "version": "0.12.202411071",
+  "version": "0.12.2024111201",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
