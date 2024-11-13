@@ -162,6 +162,8 @@ export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
 			new MyTreeItem('Clean', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Fmt', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Update', 'moonbit-tasks.onViewItemClick'),
+			new MyTreeItem('Package', 'moonbit-tasks.onViewItemClick'),
+			new MyTreeItem('Publish', 'moonbit-tasks.onViewItemClick'),
 		]);
     }
 

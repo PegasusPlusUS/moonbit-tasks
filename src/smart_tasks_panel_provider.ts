@@ -10,16 +10,22 @@ let myTerminal: vscode.Terminal | undefined;
 async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo | undefined> {
 	if (fileDir.length > 0) {
 		for (let [languageName, cmdHandler] of langDef.languageHandlerMap) {
-			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFileName)) {
+			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
 				let fSigFileFound = false;
 				try {
-					if (cmdHandler.signatureFileName[0] !== '*') {
-						const targetFilePath = path.join(fileDir, cmdHandler.signatureFileName);
-						await fsPromises.access(targetFilePath);
-						fSigFileFound = true;
-					}
-					else {
-						fSigFileFound = await searchFilesByExtension(fileDir, cmdHandler.signatureFileName);
+					/// SignatureFilePattern can be written as '*.nimble|*.json|*.csproj'
+					// const extensionExp = '*.a|*.b|*.c';
+					// const zigExp = 'build.zig|build.zig.zon';
+					const signatures = cmdHandler.signatureFilePattern.split('|').map(item => item.slice(1));
+					for(const signature of signatures) {
+						if (signature[0] !== '*') {
+							const targetFilePath = path.join(fileDir, signature);
+							await fsPromises.access(targetFilePath);
+							fSigFileFound = true;
+						}
+						else {
+							fSigFileFound = await searchFilesByExtension(fileDir, signature);
+						}
 					}
 				}
 				catch (e) {
@@ -40,11 +46,8 @@ async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo
 }
 
 /// Just search files within a dir, no subdir yet
-/// extensions can be written as '*.nimble|*.json|*.csproj'
+/// extensions can be written as '*.nimble' '*.json' '*.csproj'
 async function searchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
-	// const extensionExp = '*.a|*.b|*.c';
-	const extensions = extensionExp.split('|').map(item => item.slice(1));
-	
 	try {
 		let files = await fsPromises.readdir(folderPath);
 		for (const file of files) {
@@ -53,12 +56,8 @@ async function searchFilesByExtension(folderPath: string, extensionExp: string):
 			if (stats.isDirectory()) {
 				// Recursive search if needed
 			}
-			else {
-				for (let ext of extensions) {
-					if (file.endsWith(ext)) {
-						return true;
-					}
-				}				
+			else if (file.endsWith(extensionExp)) {
+				return true;
 			}
 		}
 	}
@@ -190,13 +189,13 @@ async function searchSignatureAtCurrentDirForActiveFile(fileDir: string, handler
 function checkSignatureForActiveFile(activeEditor: vscode.TextEditor, projectDir: string | undefined, fileDir: string, handler: langDef.handlerInfo | undefined) {
 	for (let [_languageName, cmdHandler] of langDef.languageHandlerMap) {
 		// *.nimble
-		if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFileName)) {
+		if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
 			let fSigFileFound = false;
-			if (cmdHandler.signatureFileName[0] !== '*') {
-				fSigFileFound = cmdHandler.signatureFileName == path.basename(activeEditor.document.fileName);
+			if (cmdHandler.signatureFilePattern[0] !== '*') {
+				fSigFileFound = cmdHandler.signatureFilePattern == path.basename(activeEditor.document.fileName);
 			}
 			else {
-				const extensions = cmdHandler.signatureFileName.split('|').map(item => item.slice(1));
+				const extensions = cmdHandler.signatureFilePattern.split('|').map(item => item.slice(1));
 				for (let ext of extensions) {
 					if (path.basename(activeEditor.document.fileName).endsWith(ext)) {
 						fSigFileFound = true;

@@ -62,11 +62,11 @@ function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
 
 //interface handlerInfo {
 export class handlerInfo {
-	signatureFileName : string;
+	signatureFilePattern : string;
 	projectManagerCmd ?: string;
 	macroHandler ?: Map<string, string>;
 	constructor(sigFileName: string, projectManager: string | undefined, cmdHandler: Map<string, string> | undefined) {
-		this.signatureFileName = sigFileName;
+		this.signatureFilePattern = sigFileName;
 		this.projectManagerCmd = projectManager;
 		this.macroHandler = cmdHandler;
 	}
@@ -98,7 +98,7 @@ export class handlerInfo {
 
 	toJSON(): object {
 		return {
-			signatureFileName : this.signatureFileName,
+			signatureFileName : this.signatureFilePattern,
 			projectManagerCmd : helper.isValidString(this.projectManagerCmd) ? this.projectManagerCmd : null,
 			//macroHandler : helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
             macroHandler : this.macroHandler && helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
@@ -131,14 +131,15 @@ async function asyncInitLangDef() {
 			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
 			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['run', 'run'], ['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
 			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', new Map<string, string>([['run', 'run']]))],
-			['Zig', new handlerInfo('build.zig.zon', 'zig', new Map<string, string>([['run', 'run src/main.zig'],['test', 'test src/main.zig'],]))],
+			['Zig', new handlerInfo('build.zig|build.zig.zon', 'zig', new Map<string, string>([['run', 'build run'],['test', 'build test'],]))],
 			['Gleam', new handlerInfo('gleam.toml', 'gleam', new Map<string, string>([['run', 'run'], ['fmt', 'format']]))],
 			['Go', new handlerInfo('go.mod', 'go', undefined)],
 			['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
 			['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
-			['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],]))],
+			['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],['package', 'compile && vsce package'], ['publish', 'compile && vsce publish']]))],
 			['TypeScript', new handlerInfo('tsconfig.json', 'tsc', undefined)],
-			['Swift', new handlerInfo('Package.swift', 'swift', undefined)]
+			['Swift', new handlerInfo('Package.swift', 'swift', undefined)],
+			['C/C++/CMake', new handlerInfo('CMakeLists.txt', 'cmake', new Map<string, string>([['build', '-S . -B .build && cmake --build .build'],['test', '--build .build && ctest --test-dir .build'],['run', '--build .build && ctest --test-dir .build && cmake run run']]))]
 		]);
 
 		myMap.forEach((value, key) => {

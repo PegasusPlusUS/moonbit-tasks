@@ -116,3 +116,9 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ## 0.12.2024111201
 
 - Update cmd handler for Zig, 'zig build run', 'zig build test'.
+
+## 0.12.2024111202
+
+- Signature file pattern update, allow multiple file patter, seperated by '|', e.x. 'build.zig|build.zig.zon', '*.nimble|*.nim'
+
+- Add 'Package', 'Publish' tasks
