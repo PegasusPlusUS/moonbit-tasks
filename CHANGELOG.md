@@ -122,3 +122,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Signature file pattern update, allow multiple file patter, seperated by '|', e.x. 'build.zig|build.zig.zon', '*.nimble|*.nim'
 
 - Add 'Package', 'Publish' tasks
+
+## 0.12.2024111203
+
+- Fix signature pattern processing bug (remove first char)

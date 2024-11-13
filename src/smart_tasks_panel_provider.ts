@@ -16,15 +16,25 @@ async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo
 					/// SignatureFilePattern can be written as '*.nimble|*.json|*.csproj'
 					// const extensionExp = '*.a|*.b|*.c';
 					// const zigExp = 'build.zig|build.zig.zon';
-					const signatures = cmdHandler.signatureFilePattern.split('|').map(item => item.slice(1));
+					const signatures = cmdHandler.signatureFilePattern.split('|').map(item => item.trim());
 					for(const signature of signatures) {
-						if (signature[0] !== '*') {
-							const targetFilePath = path.join(fileDir, signature);
-							await fsPromises.access(targetFilePath);
-							fSigFileFound = true;
-						}
-						else {
-							fSigFileFound = await searchFilesByExtension(fileDir, signature);
+						if (signature.length > 0) {
+							if (signature[0] !== '*') {
+								const targetFilePath = path.join(fileDir, signature);
+								try {
+									await fsPromises.access(targetFilePath);
+									fSigFileFound = true;
+								}
+								catch (e) {
+									//const fsErr = e as fs.FileError
+									if (!`${e}`.startsWith('Error: ENOENT')) {
+										vscode.window.showWarningMessage(`Search for project signature file failed: ${e}`);
+									}
+								}
+							}
+							else {
+								fSigFileFound = await searchFilesByExtension(fileDir, signature);
+							}
 						}
 					}
 				}
