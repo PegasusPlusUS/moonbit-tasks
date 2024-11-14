@@ -16,6 +16,8 @@ V SMART TASKS
 	Clean
 	Fmt
 	Update
+	Package
+	Publish
 
 Build -> 'moon build'
 Check -> 'moon check'
@@ -64,7 +66,6 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
 
 ## Release Notes
 
