@@ -265,3 +265,13 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 		vscode.window.showErrorMessage("Invalid CMD for task");
 	}
 }
+
+export async function activeDocumentChanges(editor:any) {
+	if (editor) {
+		// Notify when the active editor changes
+		// console.log(`Active file: ${editor.document.uri.fsPath}`);
+	} else {
+		// console.log("No active editor.");
+	}
+	return;
+}

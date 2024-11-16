@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
-//import * as path from 'path';
-//import { promises as fsPromises } from 'fs';
 
-//import * as helper from './helper';
 import * as langDef from './language_def';
-import { smartTaskRun } from './smart_tasks_panel_provider';
+import { smartTaskRun, activeDocumentChanges } from './smart_tasks_panel_provider';
 
 export function active(context: vscode.ExtensionContext) {
 	langDef.activate(context);
 
 	//contributed task provider not very stable
-	//registerTaskProvider(context);
-	registerTreeView(context);
+	//registerContributedTaskProvider(context);
+	registerSmartTasksTreeView(context);
 
 	// Command handler for clicking on a view item
 	registerClickHandler(context);
+
+	// Track active document
+	registerActiveDocumentTracker(context);
 }
 
 export function deactivate() {
@@ -102,7 +102,16 @@ function registerClickHandler(context: vscode.ExtensionContext) {
     context.subscriptions.push(clickHandler);
 }
 
-function registerTreeView(context: vscode.ExtensionContext) {
+function registerActiveDocumentTracker(context: vscode.ExtensionContext) {
+    // Listen for changes to the active text editor
+    vscode.window.onDidChangeActiveTextEditor((editor: any) => {
+        activeDocumentChanges(editor);
+    });
+
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor);
+}
+
+function registerSmartTasksTreeView(context: vscode.ExtensionContext) {
     const treeDataProvider = new MyTreeDataProvider();
     const treeView = vscode.window.registerTreeDataProvider('mySmartTasksCustomView', treeDataProvider);
     context.subscriptions.push(treeView);
@@ -115,7 +124,7 @@ function registerTreeView(context: vscode.ExtensionContext) {
     );
 }
 
-function registerTaskProvider(context: vscode.ExtensionContext) {
+function registerContributedTaskProvider(context: vscode.ExtensionContext) {
     const taskProvider = vscode.tasks.registerTaskProvider('moon', {
         provideTasks: () => {
             return getCustomTasks();
@@ -132,6 +141,7 @@ export class MyStubTreeItem extends vscode.TreeItem {
         super(label, vscode.TreeItemCollapsibleState.None);
     }
 }
+
 export class MyTreeItem extends vscode.TreeItem {
     constructor(label: string, commandId: string) {
         super(label, vscode.TreeItemCollapsibleState.None);
@@ -144,6 +154,7 @@ export class MyTreeItem extends vscode.TreeItem {
         };
     }
 }
+
 export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<MyTreeItem | undefined> = new vscode.EventEmitter<MyTreeItem | undefined>();
     readonly onDidChangeTreeData: vscode.Event<MyTreeItem | undefined> = this._onDidChangeTreeData.event;
@@ -153,6 +164,7 @@ export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
     }
 
     getChildren(element?: MyTreeItem): Thenable<MyTreeItem[]> {
+        return Promise.resolve([new vscode.TreeItem('Searching signature file for project...')]);
         return Promise.resolve([
 			new MyTreeItem('Build', 'moonbit-tasks.onViewItemClick'),
 			new MyTreeItem('Check', 'moonbit-tasks.onViewItemClick'),
