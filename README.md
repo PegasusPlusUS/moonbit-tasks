@@ -47,8 +47,6 @@ Sample definition:
 
 //Create tasks for contributed task group 'moon', to make build/test/clean etc tasks easier.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
 ## Requirements
 
 CLI of Moonbit installed so that shellcmd 'moon' can be called
@@ -191,3 +189,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ### 0.12.2024111203
 
 - Fix signature pattern processing bug (remove first char)
+
+### 0.12.2024112301
+
+- Define tasks of language

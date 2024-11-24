@@ -60,6 +60,23 @@ function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
 	return cmdStr;
 }
 
+/// Build-> Debug
+///         Release
+///                Fast
+///                Small
+///
+/// Test-> Lib
+///        Bin
+///        Doc
+///
+/// Run-> Debug
+///            Bin1
+///            Bin2
+///       Run
+///          Bin1
+///          Bin2
+/// Coverage-> Tarpaulin
+///        GCov
 //interface handlerInfo {
 export class handlerInfo {
 	signatureFilePattern : string;
