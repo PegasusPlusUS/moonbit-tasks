@@ -107,11 +107,11 @@ export async function smartTaskRun(cmd: string) {
 			vscode.window.showWarningMessage(`Error occurred while searching project signature file: ${err}`);
 		}
 	} else {
-		vscode.window.showWarningMessage("No active file found.");
+		//vscode.window.showWarningMessage("No active file found.");
 	}
 
 	if (helper.isValidString(projectDir) && langDef.handlerInfo.isValid(handler)) {
-		vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
+		//vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
 
 		// Example shell command to be executed in the current file's directory
 		const shellCommand = handler?.getFullCmd(cmd);
@@ -120,7 +120,7 @@ export async function smartTaskRun(cmd: string) {
 		runCmdInTerminal(shellCommand, projectDir);
 	}
 	else {
-		vscode.window.showWarningMessage(`Can't find any project signature file.`);
+		//vscode.window.showWarningMessage(`Can't find any project signature file.`);
 	}
 }
 
