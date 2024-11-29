@@ -60,8 +60,9 @@ function stopWatchingLangDefChanges() {
 export let gitDef: Map<string, string> = new Map([
 	['pull', 'git pull'],
 	['fetch', 'git fetch'],
-	['commit', 'git commit'],
-	['commit - push', 'git commit; git push'],
+	['stage', 'git stage'],
+	['commit', 'git add .; git commit -m "${param}"'],
+	['commit|push', 'git add .; git commit -m "${param}"; git push'],
 ]);
 
 /// Build-> Debug

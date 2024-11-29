@@ -131,14 +131,27 @@ export async function smartTaskRun(cmd: string) {
 	}
 }
 
+export function deactivate() {}
+
 export async function gitTaskRun(cmd: string) {
 	// Get the current active file in the Explorer
 	const activeEditor = vscode.window.activeTextEditor;
 	if (activeEditor) {
 		const filePath = activeEditor.document.uri.fsPath;
 		const fileDir = path.dirname(filePath);  // Get the directory of the current file
-		const shellCommand = langDef.gitDef.get(cmd);
+		let shellCommand = langDef.gitDef.get(cmd);
 		if (shellCommand != undefined) {
+			// git commit need message
+			if (cmd.startsWith('commit')) {
+				const userInput = await vscode.window.showInputBox({
+					prompt: 'Please enter commit message',
+					placeHolder: 'Message for commit:'
+				});
+
+				if (userInput !== undefined) {
+					shellCommand = shellCommand.replace('${param}', userInput);
+				}
+			}
 			runCmdInTerminal(shellCommand, fileDir);
 		}
 		else {
