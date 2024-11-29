@@ -132,3 +132,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Redefine tasks of language, smart tasks menu refresh when capture project signatures
 
 - Add Git tasks view
+
+## 0.12.2024112907
+
+- Update language def

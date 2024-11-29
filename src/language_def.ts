@@ -133,13 +133,29 @@ async function asyncInitLangDef() {
 		const myMap: Map<string, handlerInfo> = new Map([
 			['Moonbit', new handlerInfo('moon.mod.json', new Map([
 				['Build', 'moon build'],
-				['Test', 'moon test']
+				['Check', 'moon check'],
+				['Run', 'moon run'],
+				['Test', 'moon test'],
+				['Coverage', 'moon test --enable-coverage; moon coverage report'],
+				['Clean', 'moon clean'],
+				['Format', 'moon fmt'],
+				['Doc', 'moon doc'],
+				['Package', 'moon package'],
+				['Publish', 'moon publish'],
+				['Update', 'moon update'],
+				['Upgrade', 'moon upgrade'],
 			]))],
 			['Rust', new handlerInfo('Cargo.toml', new Map([
 				['Build', 'cargo b'],
+				['Cargo', 'cargo c'],
+				['Run', 'cargo r'],
 				['Test','cargo t'],
 				['Format', 'cargo fmt'],
-				['Coverage','cargo tarpaulin']
+				['Coverage','cargo tarpaulin'],
+				['Doc', 'cargo d'],
+				['Clean', 'cargo clean'],
+				['Update', 'cargo update'],
+				['Publish', 'cargo publish'],
 			]))],
 			['Nim', new handlerInfo('*.nimble', new Map([
 				['run', 'nimble run'],
@@ -148,7 +164,11 @@ async function asyncInitLangDef() {
 			]))],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([
 				['Build', 'cjpm build'],
-				['Run', 'cjpm run']
+				['Check', 'cjpm check'],
+				['Run', 'cjpm run'],
+				['Test', 'cjpm test'],
+				['Bench', 'cjpm bench'],
+				['Clean', 'cjpm clean'],
 			]))],
 			['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
 				['Build', 'zig build'],
@@ -156,13 +176,25 @@ async function asyncInitLangDef() {
 				['Test', 'zig build test'],
 			]))],
 			['Gleam', new handlerInfo('gleam.toml', new Map([
+				['Build', 'gleam build'],
 				['Run', 'gleam run'],
+				['Check', 'gleam check'],
+				['Clean', 'gleam clean'],
 				['Format', 'gleam format'],
+				['Docs', 'gleam docs'],
+				['Fix', 'gleam fix'],
+				['Publish', 'gleam publish'],
+				['Update', 'gleam update'],
+				['Shell', 'gleam shell'],
 			]))],
 			['Go', new handlerInfo('go.mod', new Map([
 				['Build', 'go build'],
 				['Run', 'go run'],
-				['Test', 'go test']
+				['Test', 'go test'],
+				['Doc', 'go doc'],
+				['Clean', 'go clean'],
+				['Fix', 'go fix'],
+				['Format', 'go format'],
 			]))],
 			['Wa', new handlerInfo('wa.mod', new Map([
 				['Build', 'wa build'],
