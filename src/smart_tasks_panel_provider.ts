@@ -4,10 +4,11 @@ import { promises as fsPromises } from 'fs';
 
 import * as helper from './helper';
 import * as langDef from './language_def';
+import {MyTreeDataProvider, mySmartTasksCustomViewID, refereshSmartTasksDataProvider} from "./language_handler";
 
 let myTerminal: vscode.Terminal | undefined;
 
-async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo | undefined> {
+export async function smartGetProjectPath(fileDir: string): Promise<langDef.handlerInfo | undefined> {
 	if (fileDir.length > 0) {
 		for (let [languageName, cmdHandler] of langDef.languageHandlerMap) {
 			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
@@ -114,7 +115,7 @@ export async function smartTaskRun(cmd: string) {
 		//vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
 
 		// Example shell command to be executed in the current file's directory
-		const shellCommand = handler?.getFullCmd(cmd);
+		const shellCommand = handler?.commands.get(cmd);
 
 		// Run the shell command in the file's directory
 		runCmdInTerminal(shellCommand, projectDir);
@@ -266,10 +267,19 @@ function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
 	}
 }
 
+let lastActiveDocumentDir : string = "";
+
 export async function activeDocumentChanges(editor:any) {
 	if (editor) {
-		// Notify when the active editor changes
-		// console.log(`Active file: ${editor.document.uri.fsPath}`);
+		let documentDir = path.dirname(editor.document.uri.fsPath);
+		let refresh = lastActiveDocumentDir != documentDir;
+
+		// If path changes, rescan for project type
+		if (refresh) {
+			lastActiveDocumentDir = documentDir;
+			refereshSmartTasksDataProvider(documentDir);
+			//vscode.window.showInformationMessage(root_title);
+		}
 	} else {
 		// console.log("No active editor.");
 	}

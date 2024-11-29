@@ -1,9 +1,9 @@
 {
-  "name": "moonbit-tasks",
-  "displayName": "Moonbit Tasks",
-  "description": "Add contributed tasks for moonbit",
+  "name": "moonbit-tasks-local",
+  "displayName": "Moonbit Tasks - local",
+  "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024112301",
+  "version": "0.12.2024112802",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -19,17 +19,17 @@
       "type": "object",
       "title": "Moonbit tasks Settings",
       "properties": {
-        "moonbit-tasks.moonPath": {
+        "moonbit-tasks-local.moonPath": {
           "type": "string",
           "default": "${workspaceFolder}",
           "description": "Set the directory for moon"
         },
-        "moonbit-tasks.scanSubdirectoryForProject": {
+        "moonbit-tasks-local.scanSubdirectoryForProject": {
           "type": "boolean",
           "default": true,
           "description": "Scan subdirectory for project"
         },
-        "moonbit-tasks.languageHandlerDef.json": {
+        "moonbit-tasks-local.languageHandlerDef.json": {
           "type": "string",
           "default": "{\"Moonbit\":{\"signatureFileName\":\"moon.mod.json\",\"projectManagerCmd\":\"moon\",\"macroHandler\":null},\"Rust\":{\"signatureFileName\":\"Cargo.toml\",\"projectManagerCmd\":\"cargo\",\"macroHandler\":{\"run\":\"run src/main\",\"coverage\":\"tarpaulin --skip-clean\"}},\"Nim\":{\"signatureFileName\":\"*.nimble\",\"projectManagerCmd\":\"nimble\",\"macroHandler\":{\"run\":\"run\",\"fmt\":\"for /r %f in (*.nim) do ( nimpretty --backup:off %f )\",\"coverage\":\"testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests\"}},\"Cangjie\":{\"signatureFileName\":\"cjpm.toml\",\"projectManagerCmd\":\"cjpm\",\"macroHandler\":{\"run\":\"run\"}},\"Zig\":{\"signatureFileName\":\"build.zig|build.zig.zon\",\"projectManagerCmd\":\"zig\",\"macroHandler\":{\"run\":\"run src/main.zig\",\"test\":\"test src/main.zig\"}},\"Gleam\":{\"signatureFileName\":\"gleam.toml\",\"projectManagerCmd\":\"gleam\",\"macroHandler\":{\"run\":\"run\",\"fmt\":\"format\"}},\"Go\":{\"signatureFileName\":\"go.mod\",\"projectManagerCmd\":\"go\",\"macroHandler\":null},\"Wa\":{\"signatureFileName\":\"wa.mod\",\"projectManagerCmd\":\"wa\",\"macroHandler\":null},\"Java\":{\"signatureFileName\":\"pom.xml\",\"projectManagerCmd\":\"mvn\",\"macroHandler\":{\"build\":\"compile\"}},\"Npm\":{\"signatureFileName\":\"package.json\",\"projectManagerCmd\":\"npm run\",\"macroHandler\":{\"build\":\"compile\",\"package\":\"compile && vsce package\",\"publish\":\"compile && vsce publish\"}},\"TypeScript\":{\"signatureFileName\":\"tsconfig.json\",\"projectManagerCmd\":\"tsc\",\"macroHandler\":null},\"Swift\":{\"signatureFileName\":\"Package.swift\",\"projectManagerCmd\":\"swift\",\"macroHandler\":{\"run\":\"run\"}},\"C++\":{\"signatureFileName\":\"CMakeLists.txt\",\"projectManagerCmd\":\"cmake\",\"macroHandler\":{\"run\":\"run\", \"build\":\"-S . -B .build&& cmake --build .build\", \"test\":\"-S. -B .build&&cmake --build .build&&ctest --test-dir .build\"}}}",
           "description": "Define cmd for language"
@@ -75,18 +75,18 @@
     "views": {
       "explorer": [
         {
-          "id": "mySmartTasksCustomView",
-          "name": "Smart Tasks"
+          "id": "mySmartTasksCustomViewLocal",
+          "name": "Smart Tasks - Local"
         }
       ]
     },
     "commands": [
       {
-        "command": "mySmartTasksCustomView.refresh",
+        "command": "mySmartTasksCustomViewLocal.refresh",
         "title": "Refresh My Smart Tasks View"
       },
       {
-        "command": "moonbit-tasks.onViewItemClick",
+        "command": "moonbit-tasks-local.onViewItemClick",
         "title": "On View Item Click"
       }
     ]

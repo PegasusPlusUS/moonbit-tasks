@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
 import * as langDef from './language_def';
-import { smartTaskRun, activeDocumentChanges } from './smart_tasks_panel_provider';
+import { smartGetProjectPath, smartTaskRun, activeDocumentChanges } from './smart_tasks_panel_provider';
 
+export const extension_name = "moonbit-tasks-local";
 export function active(context: vscode.ExtensionContext) {
 	langDef.activate(context);
 
@@ -25,7 +26,7 @@ async function getCustomTasks(): Promise<vscode.Task[]> {
     let tasks: vscode.Task[] = [];
     const workspaceFolders = vscode.workspace.workspaceFolders;
     // Retrieve the user-defined setting
-    const config = vscode.workspace.getConfiguration('moonbit-tasks');
+    const config = vscode.workspace.getConfiguration(extension_name);
     const scanSubdirectoryForProject = config.get<boolean>('scanSubdirectoryForProject', true);  // Default to 'build.sh' if not set
 
     if (workspaceFolders) {
@@ -86,12 +87,7 @@ async function getCustomTasks(): Promise<vscode.Task[]> {
 }
 
 function registerClickHandler(context: vscode.ExtensionContext) {
-    const clickHandler = vscode.commands.registerCommand('moonbit-tasks.onViewItemClick', async (item: MyTreeItem) => {
-        // Handle the item click
-        //vscode.window.showInformationMessage(`You clicked on: ${item} - ${item.label}`);
-
-        // You can also perform more complex actions here,
-        // like opening a file or running other commands.
+    const clickHandler = vscode.commands.registerCommand(extension_name + '.onViewItemClick', async (item: MyTreeItem) => {
         try {
             await smartTaskRun(`${item}`);
         } catch(err) {
@@ -107,18 +103,17 @@ function registerActiveDocumentTracker(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor((editor: any) => {
         activeDocumentChanges(editor);
     });
-
-    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor);
 }
 
+export const mySmartTasksCustomViewID = 'mySmartTasksCustomViewLocal';
+
 function registerSmartTasksTreeView(context: vscode.ExtensionContext) {
-    const treeDataProvider = new MyTreeDataProvider();
-    const treeView = vscode.window.registerTreeDataProvider('mySmartTasksCustomView', treeDataProvider);
+    let treeDataProvider = new MyTreeDataProvider();
+    const treeView = vscode.window.registerTreeDataProvider(mySmartTasksCustomViewID, treeDataProvider);
     context.subscriptions.push(treeView);
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('mySmartTasksCustomView.refresh', () => {
-            vscode.window.showInformationMessage(`Need refresh smart tasks custom view`);
+        vscode.commands.registerCommand(mySmartTasksCustomViewID + '.refresh', () => {
             treeDataProvider.refresh();
         })
     );
@@ -155,6 +150,26 @@ export class MyTreeItem extends vscode.TreeItem {
     }
 }
 
+let smartTasksRootTitle = "No active document";
+let smartCommands:string[] = [];
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function refereshSmartTasksDataProvider(documentDir: string) {
+    smartTasksRootTitle = "Detecting " + documentDir;
+    smartCommands = [];
+    vscode.commands.executeCommand(mySmartTasksCustomViewID + '.refresh');
+    let handlerInfo = await smartGetProjectPath(documentDir);
+    if (handlerInfo == undefined) {
+        smartTasksRootTitle = "Can't find signature of project";
+    } else {
+        smartCommands = Array.from(handlerInfo.commands.keys());
+    }
+    vscode.commands.executeCommand(mySmartTasksCustomViewID + '.refresh');
+}
+
 export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<MyTreeItem | undefined> = new vscode.EventEmitter<MyTreeItem | undefined>();
     readonly onDidChangeTreeData: vscode.Event<MyTreeItem | undefined> = this._onDidChangeTreeData.event;
@@ -164,19 +179,13 @@ export class MyTreeDataProvider implements vscode.TreeDataProvider<MyTreeItem> {
     }
 
     getChildren(element?: MyTreeItem): Thenable<MyTreeItem[]> {
-        return Promise.resolve([new vscode.TreeItem('Searching signature file for project...')]);
-        return Promise.resolve([
-			new MyTreeItem('Build', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Check', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Test', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Coverage', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Run', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Clean', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Fmt', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Update', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Package', 'moonbit-tasks.onViewItemClick'),
-			new MyTreeItem('Publish', 'moonbit-tasks.onViewItemClick'),
-		]);
+        if (smartCommands.length == 0) {
+            return Promise.resolve([new vscode.TreeItem(smartTasksRootTitle)]);
+        } else {
+            const commandItems: MyTreeItem[] = smartCommands.map(str => new MyTreeItem(str, extension_name + '.onViewItemClick'));
+
+            return Promise.resolve(commandItems);
+        }
     }
 
     refresh(): void {

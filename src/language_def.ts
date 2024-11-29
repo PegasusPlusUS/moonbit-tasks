@@ -4,6 +4,7 @@ import { promises as fsPromises } from 'fs';
 import * as fs from 'fs';
 
 import * as helper from './helper'
+import { extension_name } from './language_handler'
 
 let configChangeListener: vscode.Disposable | undefined;
 let extensionContext: vscode.ExtensionContext | undefined; // Store context for later use
@@ -14,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 	asyncInitLangDef();
 }
 
-const configNameLangDef = "moonbit-tasks.languageHandlerDef";
+const configNameLangDef = extension_name + '.languageHandlerDef';
 
 function startWatchingLangDefChanges() {
     // Check if listener already exists, if so, dispose it
@@ -68,41 +69,25 @@ function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
 /// Test-> Lib
 ///        Bin
 ///        Doc
+///		   Coverage
 ///
 /// Run-> Debug
 ///            Bin1
 ///            Bin2
-///       Run
+///       Release
 ///          Bin1
 ///          Bin2
+///
 /// Coverage-> Tarpaulin
 ///        GCov
+///
 //interface handlerInfo {
 export class handlerInfo {
 	signatureFilePattern : string;
-	projectManagerCmd ?: string;
-	macroHandler ?: Map<string, string>;
-	constructor(sigFileName: string, projectManager: string | undefined, cmdHandler: Map<string, string> | undefined) {
+	commands: Map<string, string>;
+	constructor(sigFileName: string, commands: Map<string, string>) {
 		this.signatureFilePattern = sigFileName;
-		this.projectManagerCmd = projectManager;
-		this.macroHandler = cmdHandler;
-	}
-
-	getFullCmd(cmdType: string) : string | undefined {
-		cmdType = cmdType.toLowerCase();
-		let macroedCmd = cmdMacroHandler(this.macroHandler?.get(cmdType));
-		if (!helper.isValidString(macroedCmd)) {
-            if (cmdType == 'run') {
-                cmdType = 'run src/main'
-            }
-            else if (cmdType == 'coverage') {
-                cmdType = `test --enable-coverage; moon coverage report`
-            }
-            return this.projectManagerCmd + " " + cmdType;
-		}
-		else {
-			return this.projectManagerCmd + " " + macroedCmd;
-		}
+		this.commands = commands;
 	}
 
 	static isValid(h: handlerInfo | undefined) : boolean {
@@ -116,14 +101,12 @@ export class handlerInfo {
 	toJSON(): object {
 		return {
 			signatureFileName : this.signatureFilePattern,
-			projectManagerCmd : helper.isValidString(this.projectManagerCmd) ? this.projectManagerCmd : null,
-			//macroHandler : helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
-            macroHandler : this.macroHandler && helper.isValidMap(this.macroHandler) ? Object.fromEntries(this.macroHandler) : null
+			commands : this.commands,
 		};
 	}
 
 	static fromJSON(json: any): handlerInfo {
-		return new handlerInfo(json.signatureFileName, json.projectManagerCmd, json.macroHandler ? new Map(Object.entries(json.macroHandler)) : json.macroHandler);
+		return new handlerInfo(json.signatureFileName, json.commands);
 	}
 }
 
@@ -144,19 +127,69 @@ async function asyncInitLangDef() {
 
 	if (!helper.isValidMap(languageHandlerMap)) {
 		const myMap: Map<string, handlerInfo> = new Map([
-			['Moonbit', new handlerInfo('moon.mod.json', 'moon', undefined)],
-			['Rust', new handlerInfo('Cargo.toml', 'cargo', new Map<string, string>([['run', 'run src/main'],['coverage', 'tarpaulin'],]))],
-			['Nim', new handlerInfo('*.nimble', 'nimble', new Map<string, string>([['run', 'run'], ['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],]))],
-			['Cangjie', new handlerInfo('cjpm.toml', 'cjpm', new Map<string, string>([['run', 'run']]))],
-			['Zig', new handlerInfo('build.zig|build.zig.zon', 'zig', new Map<string, string>([['run', 'build run'],['test', 'build test'],]))],
-			['Gleam', new handlerInfo('gleam.toml', 'gleam', new Map<string, string>([['run', 'run'], ['fmt', 'format']]))],
-			['Go', new handlerInfo('go.mod', 'go', undefined)],
-			['Wa', new handlerInfo('wa.mod', 'wa', undefined)],
-			['Java', new handlerInfo('pom.xml', 'mvn', new Map<string, string>([['build', 'compile'],]))],
-			['Npm', new handlerInfo('package.json', 'npm run', new Map<string, string>([['build', 'compile'],['package', 'compile && vsce package'], ['publish', 'compile && vsce publish']]))],
-			['TypeScript', new handlerInfo('tsconfig.json', 'tsc', undefined)],
-			['Swift', new handlerInfo('Package.swift', 'swift', undefined)],
-			['C/C++/CMake', new handlerInfo('CMakeLists.txt', 'cmake', new Map<string, string>([['build', '-S . -B .build && cmake --build .build'],['test', '--build .build && ctest --test-dir .build'],['run', '--build .build && ctest --test-dir .build && cmake run run']]))]
+			['Moonbit', new handlerInfo('moon.mod.json', new Map([
+				['Build', 'moon build'],
+				['Test', 'moon test']
+			]))],
+			['Rust', new handlerInfo('Cargo.toml', new Map([
+				['Build', 'cargo b'],
+				['Test','cargo t'],
+				['Format', 'cargo fmt'],
+				['Coverage','cargo tarpaulin']
+			]))],
+			['Nim', new handlerInfo('*.nimble', new Map([
+				['run', 'nimble run'],
+				['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
+				["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
+			]))],
+			['Cangjie', new handlerInfo('cjpm.toml', new Map([
+				['Build', 'cjpm build'],
+				['Run', 'cjpm run']
+			]))],
+			['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
+				['Build', 'zig build'],
+				['Run', 'zig build run'],
+				['Test', 'zig build test'],
+			]))],
+			['Gleam', new handlerInfo('gleam.toml', new Map([
+				['Run', 'gleam run'],
+				['Format', 'gleam format'],
+			]))],
+			['Go', new handlerInfo('go.mod', new Map([
+				['Build', 'go build'],
+				['Run', 'go run'],
+				['Test', 'go test']
+			]))],
+			['Wa', new handlerInfo('wa.mod', new Map([
+				['Build', 'wa build'],
+				['Run', 'wa run'],
+				['Test', 'wa test'],
+			]))],
+			['Java', new handlerInfo('pom.xml', new Map([
+				['Build', 'mvn compile'],
+				['Run', 'mvn run'],
+				['Test', 'mvn test'],
+			]))],
+			['Npm', new handlerInfo('package.json', new Map([
+				['Build', 'npm run compile'],
+				['Package', 'npm run compile && vsce.cmd package'],
+				['Publish', 'npm run compile && vsce.cmd publish']
+			]))],
+			['TypeScript', new handlerInfo('tsconfig.json', new Map([
+				['Build', 'tsc build'],
+				['Run', 'tsc run'],
+				['Test', 'tsc test']
+			]))],
+			['Swift', new handlerInfo('Package.swift', new Map([
+				['Build', 'swift build'],
+				['Run', 'swift run'],
+				['Test', 'swift test']
+			]))],
+			['C/C++/CMake', new handlerInfo('CMakeLists.txt', new Map([
+				['Build', 'cmake -S . -B .build && cmake --build .build'],
+				['Test', 'cmake --build .build && ctest --test-dir .build'],
+				['Run', 'cmake --build .build && ctest --test-dir .build && cmake run run']
+			]))]
 		]);
 
 		myMap.forEach((value, key) => {
