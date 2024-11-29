@@ -15,6 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
 	asyncInitLangDef();
 }
 
+const configNameGitDef = extension_name + '.gitDef';
 const configNameLangDef = extension_name + '.languageHandlerDef';
 
 function startWatchingLangDefChanges() {
@@ -56,10 +57,12 @@ function stopWatchingLangDefChanges() {
 	fs.unwatchFile(fullFilePathNameLangDef);
 }
 
-/// using macro to build cmd, pwd, actFile, ^ etc
-function cmdMacroHandler(cmdStr: string | undefined) : string | undefined {
-	return cmdStr;
-}
+export let gitDef: Map<string, string> = new Map([
+	['pull', 'git pull'],
+	['fetch', 'git fetch'],
+	['commit', 'git commit'],
+	['commit - push', 'git commit; git push'],
+]);
 
 /// Build-> Debug
 ///         Release

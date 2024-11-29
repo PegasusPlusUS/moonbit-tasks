@@ -190,6 +190,8 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 - Fix signature pattern processing bug (remove first char)
 
-### 0.12.2024112301
+### 0.12.2024112806
 
-- Define tasks of language
+- Redefine tasks of language, smart tasks menu refresh when capture project signatures
+
+- Add Git tasks view

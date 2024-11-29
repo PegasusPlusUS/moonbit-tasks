@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { promises as fsPromises } from 'fs';
+import { access as fsAccess, constants as fsConstants, promises as fsPromises } from 'fs';
 
 import * as helper from './helper';
 import * as langDef from './language_def';
-import {MyTreeDataProvider, mySmartTasksCustomViewID, refereshSmartTasksDataProvider} from "./language_handler";
+import { MySmartTasksTreeDataProvider, mySmartTasksCustomViewID, refereshSmartTasksDataProvider } from "./language_handler";
+import os from "os";
 
 let myTerminal: vscode.Terminal | undefined;
 
@@ -81,11 +82,9 @@ async function searchFilesByExtension(folderPath: string, extensionExp: string):
 	return false;
 }
 
-/// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task 
-export async function smartTaskRun(cmd: string) {
+export async function detectProjectForActiveDocument() {
 	let projectDir :string|undefined;
 	let handler :langDef.handlerInfo|undefined;
-	//let languageName :string|undefined;
 
 	// Get the current active file in the Explorer
 	const activeEditor = vscode.window.activeTextEditor;
@@ -93,35 +92,60 @@ export async function smartTaskRun(cmd: string) {
 		const filePath = activeEditor.document.uri.fsPath;
 		const fileDir = path.dirname(filePath);  // Get the directory of the current file
 		try {
-			({ projectDir, handler } = checkSignatureForActiveFile(activeEditor, projectDir, fileDir, handler));
+			({projectDir, handler} = checkSignatureForActiveFile(activeEditor, projectDir, fileDir, handler));
 
 			if (langDef.handlerInfo.notValid(handler)) {
-				({ handler, projectDir } = await searchSignatureAtCurrentDirForActiveFile(fileDir, handler, projectDir));
+				({handler, projectDir} = await searchSignatureAtCurrentDirForActiveFile(fileDir, handler, projectDir));
 			}
 
 			if (langDef.handlerInfo.notValid(handler)) {
 				// The root path that contain current document
 				// Get the workspace folders
-				({ handler, projectDir } = await searchSignatureFromWorkSpace(fileDir, handler, projectDir));
+				({handler, projectDir} = await searchSignatureFromWorkSpace(fileDir, handler, projectDir));
 			}
+			return {handler, projectDir};
 		} catch (err) {
 			vscode.window.showWarningMessage(`Error occurred while searching project signature file: ${err}`);
 		}
 	} else {
 		//vscode.window.showWarningMessage("No active file found.");
 	}
+}
 
-	if (helper.isValidString(projectDir) && langDef.handlerInfo.isValid(handler)) {
-		//vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
+/// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task
+export async function smartTaskRun(cmd: string) {
+	let result = await detectProjectForActiveDocument();
 
-		// Example shell command to be executed in the current file's directory
-		const shellCommand = handler?.commands.get(cmd);
+	if (result) {
+		if (helper.isValidString(result.projectDir) && langDef.handlerInfo.isValid(result.handler)) {
+			//vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
 
-		// Run the shell command in the file's directory
-		runCmdInTerminal(shellCommand, projectDir);
+			// Example shell command to be executed in the current file's directory
+			const shellCommand = result.handler?.commands.get(cmd);
+
+			// Run the shell command in the file's directory
+			runCmdInTerminal(shellCommand, result.projectDir);
+		} else {
+			//vscode.window.showWarningMessage(`Can't find any project signature file.`);
+		}
 	}
-	else {
-		//vscode.window.showWarningMessage(`Can't find any project signature file.`);
+}
+
+export async function gitTaskRun(cmd: string) {
+	// Get the current active file in the Explorer
+	const activeEditor = vscode.window.activeTextEditor;
+	if (activeEditor) {
+		const filePath = activeEditor.document.uri.fsPath;
+		const fileDir = path.dirname(filePath);  // Get the directory of the current file
+		const shellCommand = langDef.gitDef.get(cmd);
+		if (shellCommand != undefined) {
+			runCmdInTerminal(shellCommand, fileDir);
+		}
+		else {
+			//vscode.window.showWarningMessage(`Can't find any project signature file.`);
+		}
+	} else {
+		//vscode.window.showWarningMessage("No active file found.");
 	}
 }
 
@@ -228,22 +252,41 @@ function checkSignatureForActiveFile(activeEditor: vscode.TextEditor, projectDir
 	return { projectDir, handler };
 }
 
-function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
-	function getShellPath(): string {
+async function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
+	async function getShellPath(): Promise<string> {
+		let defaultTerminalShellPath : string = "";
+		let terminalProfilePath : string = "windows";
+
 		const os = require("os");
 		if (os.platform() === 'win32') {
-			return 'cmd.exe';
+			defaultTerminalShellPath = 'cmd.exe';
 		} else if (os.platform() === 'darwin') {
-			return '/bin/zsh';
+			defaultTerminalShellPath = '/bin/zsh';
+			terminalProfilePath = "macOS";
 		} else {
-			return '/bin/bash';
+			defaultTerminalShellPath = '/bin/bash';
+			terminalProfilePath = "linux";
 		}
+
+		const config = vscode.workspace.getConfiguration('terminal.integrated.profiles.' + terminalProfilePath);
+		const gitBashProfile = config.get< {path:string}>('Git Bash');
+		if (gitBashProfile && gitBashProfile.path) {
+			return gitBashProfile.path;
+		} else {
+			const gitBashFilePath = "C:\\Program Files\\Git\\bin\\bash.exe";
+			try {
+				await fsPromises.access(gitBashFilePath, fsConstants.F_OK);
+				return gitBashFilePath;
+			} catch {
+			}
+		}
+		return defaultTerminalShellPath;
 	}
 
 	if (!myTerminal || myTerminal.exitStatus) {
 		myTerminal = vscode.window.createTerminal({
-			name:'Moonbit-tasks extention Terminal',
-			shellPath:getShellPath(),
+			name:'Moonbit-tasks extension Terminal',
+			shellPath: await getShellPath(),
 			iconPath:new vscode.ThemeIcon('tools')
 		});
 	}
