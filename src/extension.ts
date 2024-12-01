@@ -182,7 +182,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <div class="button-container">
-                        <button class="button" onclick="gitStage()">Stage</button>
+                        <button class="button" id="stageBtn" onclick="gitStage()" disabled>Stage</button>
                         <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
                         <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
                     </div>
@@ -216,7 +216,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
-                                    updateButtonStates(message.hasStagedChanges);
+                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges);
                                     break;
                                 case 'error':
                                     showError(message.message);
@@ -239,12 +239,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function gitStage() {
-                            const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked'))
+                            const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
                                 .map(cb => cb.getAttribute('data-file'));
-                            vscode.postMessage({ 
-                                command: 'stage',
-                                files: checkedFiles
-                            });
+                            if (checkedFiles.length > 0) {
+                                vscode.postMessage({ 
+                                    command: 'stage',
+                                    files: checkedFiles
+                                });
+                            }
                         }
 
                         function gitCommit() {
@@ -263,10 +265,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         }
 
-                        function updateButtonStates(hasStagedChanges) {
+                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges) {
+                            const stageBtn = document.getElementById('stageBtn');
                             const commitBtn = document.getElementById('commitBtn');
                             const commitAndPushBtn = document.getElementById('commitAndPushBtn');
                             
+                            stageBtn.disabled = !hasUnstagedChanges;
                             commitBtn.disabled = !hasStagedChanges;
                             commitAndPushBtn.disabled = !hasStagedChanges;
                         }
@@ -412,7 +416,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         try {
             const git = await this.getGitAPI(webview);
             if (!git?.repositories?.length) {
-                webview.postMessage({ type: 'gitChanges', changes: [] });
+                webview.postMessage({ 
+                    type: 'gitChanges', 
+                    changes: [], 
+                    hasStagedChanges: false,
+                    hasUnstagedChanges: false 
+                });
                 webview.postMessage({ 
                     type: 'error', 
                     message: 'No Git repository found'
@@ -423,7 +432,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repo = git.repositories[0];
             const state = repo.state;
             
-            // Get both working tree and index (staged) changes
             const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
                 status: change.status,
@@ -440,7 +448,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             webview.postMessage({ 
                 type: 'gitChanges', 
                 changes: allChanges,
-                hasStagedChanges: stagedChanges.length > 0
+                hasStagedChanges: stagedChanges.length > 0,
+                hasUnstagedChanges: workingChanges.length > 0
             });
             
             if (allChanges.length === 0) {
@@ -450,7 +459,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 });
             }
         } catch (error: any) {
-            webview.postMessage({ type: 'gitChanges', changes: [] });
+            webview.postMessage({ 
+                type: 'gitChanges', 
+                changes: [], 
+                hasStagedChanges: false,
+                hasUnstagedChanges: false
+            });
             webview.postMessage({ 
                 type: 'error', 
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
