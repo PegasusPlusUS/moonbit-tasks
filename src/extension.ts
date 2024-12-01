@@ -249,12 +249,29 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             commitAndPushBtn.disabled = !hasStagedChanges;
                         }
 
+                        function updateFileTree(changes) {
+                            const fileTree = document.getElementById('fileTree');
+                            fileTree.innerHTML = changes.map(file => \`
+                                <div class="file-item">
+                                    <input type="checkbox" data-file="\${file.path}" \${file.staged ? 'checked disabled' : ''}>
+                                    <span>\${file.path} (\${file.staged ? 'Staged' : file.status})</span>
+                                </div>
+                            \`).join('');
+
+                            // After updating the file tree, check if we need to update button states
+                            const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
+                            const stageBtn = document.getElementById('stageBtn');
+                            const hasUnstagedChanges = document.querySelectorAll('.file-item input[type="checkbox"]:not([disabled])').length > 0;
+                            stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
+                        }
+
                         // Add listener for checkbox changes
                         document.addEventListener('change', event => {
                             if (event.target.type === 'checkbox') {
                                 const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
+                                const hasUnstagedChanges = document.querySelectorAll('.file-item input[type="checkbox"]:not([disabled])').length > 0;
                                 const stageBtn = document.getElementById('stageBtn');
-                                stageBtn.disabled = checkedFiles.length === 0;
+                                stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
                             }
                         });
 
@@ -291,14 +308,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
                         }
 
-                        function updateFileTree(changes) {
-                            const fileTree = document.getElementById('fileTree');
-                            fileTree.innerHTML = changes.map(file => \`
-                                <div class="file-item">
-                                    <input type="checkbox" data-file="\${file.path}" \${file.staged ? 'checked disabled' : ''}>
-                                    <span>\${file.path} (\${file.staged ? 'Staged' : file.status})</span>
-                                </div>
-                            \`).join('');
+                        function getGitChanges() {
+                            vscode.postMessage({ command: 'getChanges' });
                         }
                     </script>
                 </body>
