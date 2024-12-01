@@ -260,8 +260,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // After updating the file tree, check if we need to update button states
                             const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
-                            const stageBtn = document.getElementById('stageBtn');
                             const hasUnstagedChanges = document.querySelectorAll('.file-item input[type="checkbox"]:not([disabled])').length > 0;
+                            const stageBtn = document.getElementById('stageBtn');
                             stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
                         }
 
@@ -486,6 +486,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 webview.postMessage({ 
                     type: 'info', 
                     message: 'No changes detected'
+                });
+                // Ensure buttons are disabled when no changes exist
+                webview.postMessage({ 
+                    type: 'gitChanges', 
+                    changes: [],
+                    hasStagedChanges: false,
+                    hasUnstagedChanges: false
                 });
             }
         } catch (error: any) {
