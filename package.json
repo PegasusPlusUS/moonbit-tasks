@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120102",
+  "version": "0.12.2024120103",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -56,12 +56,6 @@
           "name": "Git Tasks",
           "type": "webview"
         }
-      ],
-      "myExplorer": [
-        {
-          "id": "myWebviewView",
-          "name": "My Webview View"
-        }
       ]
     },
     "commands": [
@@ -76,32 +70,8 @@
       {
         "command": "moonbit-tasks.onGitTasksViewItemClick",
         "title": "On Git Tasks View Item Click"
-      },
-      {
-        "command": "extension.showWebviewView",
-        "title": "Show Webview View"
-      },
-      {
-        "command": "extension.openItem",
-        "title": "Open Item"
-      },
-      {
-        "command": "extension.deleteItem",
-        "title": "Delete Item"
       }
-    ],
-    "menus": {
-      "view/item/context": [
-        {
-          "command": "extension.openItem",
-          "when": "view == myTreeView && viewItem == myTreeItem"
-        },
-        {
-          "command": "extension.deleteItem",
-          "when": "view == myTreeView && viewItem == myTreeItem"
-        }
-      ]
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

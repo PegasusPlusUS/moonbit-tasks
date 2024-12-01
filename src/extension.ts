@@ -532,3 +532,4 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 }
+

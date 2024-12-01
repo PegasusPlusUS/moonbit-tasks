@@ -105,6 +105,8 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
 
     if (result == undefined || result.handler == undefined) {
         smartTasksRootTitle = "Can't find signature of project";
+    } else if (undefined == result.handler.commands) {
+        smartTasksRootTitle = "No commands found in signature";
     } else {
         smartCommands = Array.from(result.handler.commands.keys());
     }

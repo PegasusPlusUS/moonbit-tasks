@@ -15,8 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
 	asyncInitLangDef();
 }
 
-const configNameGitDef = extension_name + '.gitDef';
-const configNameLangDef = extension_name + '.languageHandlerDef';
+const configNameGitDef = 'moonbit-tasks.gitDef';
+const configNameLangDef = 'moonbit-tasks.languageHandlerDef';
 
 function startWatchingLangDefChanges() {
     // Check if listener already exists, if so, dispose it
@@ -87,33 +87,36 @@ export let gitDef: Map<string, string> = new Map([
 ///
 //interface handlerInfo {
 export class handlerInfo {
-	signatureFilePattern : string;
+	signatureFilePattern: string;
 	commands: Map<string, string>;
+	
 	constructor(sigFileName: string, commands: Map<string, string>) {
 		this.signatureFilePattern = sigFileName;
 		this.commands = commands;
 	}
 
-	static isValid(h: handlerInfo | undefined) : boolean {
+	static isValid(h: handlerInfo | undefined): boolean {
 		return h !== undefined && h !== null;
 	}
 
-	static notValid(h: handlerInfo | undefined) : boolean {
+	static notValid(h: handlerInfo | undefined): boolean {
 		return !this.isValid(h);
 	}
 
 	toJSON(): object {
 		return {
-			signatureFileName : this.signatureFilePattern,
-			commands : this.commands,
+			signatureFileName: this.signatureFilePattern,
+			commands: Array.from(this.commands.entries())
 		};
 	}
 
 	static fromJSON(json: any): handlerInfo {
-		return new handlerInfo(json.signatureFileName, json.commands);
+		return new handlerInfo(
+			json.signatureFileName,
+			new Map(json.commands)
+		);
 	}
 }
-
 // One signature might have several handler, and there might be multiple signature files in the same dir for several handlerss
 //(handler, signatureFileName)
 //(handler, command_set)
@@ -123,7 +126,7 @@ export let languageHandlerMap: Map<string, handlerInfo> = new Map();
 async function asyncInitLangDef() {
 	// Try load definition, if none, init default
 	try {
-		await asyncLoadLangDef();
+		//await asyncLoadLangDef();
 	}
 	catch(e) {
 		vscode.window.showInformationMessage(`Load language definition failed: ${e}`);
