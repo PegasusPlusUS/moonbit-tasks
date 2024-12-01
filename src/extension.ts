@@ -274,7 +274,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
     // Git command implementations
     private async gitPull(webview: vscode.Webview) {
-        const git = await this.getGitAPI();
+        const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
@@ -298,7 +298,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitFetch(webview: vscode.Webview) {
-        const git = await this.getGitAPI();
+        const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
@@ -322,7 +322,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitStage(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI();
+        const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
@@ -346,7 +346,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitCommit(message: string, webview: vscode.Webview) {
-        const git = await this.getGitAPI();
+        const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
@@ -370,7 +370,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitCommitAndPush(message: string, webview: vscode.Webview) {
-        const git = await this.getGitAPI();
+        const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
@@ -396,7 +396,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
     private async getGitChanges(webview: vscode.Webview) {
         try {
-            const git = await this.getGitAPI();
+            const git = await this.getGitAPI(webview);
             if (!git?.repositories?.length) {
                 webview.postMessage({ type: 'gitChanges', changes: [] });
                 webview.postMessage({ 
@@ -429,11 +429,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async getGitAPI() {
+    private async getGitAPI(webview: vscode.Webview) {
         try {
             const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
             if (!extension) {
-                vscode.window.showErrorMessage('Git extension not found');
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Git extension not found'
+                });
                 return undefined;
             }
 
@@ -441,7 +444,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const git = await gitExtension.getAPI(1);
             return git;
         } catch (error) {
-            vscode.window.showErrorMessage('Failed to load Git extension');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'Failed to load Git extension'
+            });
             return undefined;
         }
     }
