@@ -160,6 +160,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             border: 1px solid var(--vscode-inputValidation-infoBorder);
                             color: var(--vscode-inputValidation-infoForeground);
                         }
+                        .button:disabled {
+                            opacity: 0.5;
+                            cursor: not-allowed;
+                            background: var(--vscode-button-secondaryBackground);
+                        }
                     </style>
                 </head>
                 <body>
@@ -178,8 +183,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                     <div class="button-container">
                         <button class="button" onclick="gitStage()">Stage</button>
-                        <button class="button" onclick="gitCommit()">Commit</button>
-                        <button class="button" onclick="gitCommitAndPush()">Commit & Push</button>
+                        <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
+                        <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
                     </div>
 
                     <script>
@@ -211,6 +216,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
+                                    updateButtonStates(message.hasStagedChanges);
                                     break;
                                 case 'error':
                                     showError(message.message);
@@ -257,12 +263,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         }
 
+                        function updateButtonStates(hasStagedChanges) {
+                            const commitBtn = document.getElementById('commitBtn');
+                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
+                            
+                            commitBtn.disabled = !hasStagedChanges;
+                            commitAndPushBtn.disabled = !hasStagedChanges;
+                        }
+
                         function updateFileTree(changes) {
                             const fileTree = document.getElementById('fileTree');
                             fileTree.innerHTML = changes.map(file => \`
                                 <div class="file-item">
-                                    <input type="checkbox" data-file="\${file.path}">
-                                    <span>\${file.path} (\${file.status})</span>
+                                    <input type="checkbox" data-file="\${file.path}" \${file.staged ? 'checked disabled' : ''}>
+                                    <span>\${file.path} (\${file.staged ? 'Staged' : file.status})</span>
                                 </div>
                             \`).join('');
                         }
@@ -408,13 +422,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             const repo = git.repositories[0];
             const state = repo.state;
-            const changes = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
-                path: change.uri.fsPath,
-                status: change.status
-            }));
-            webview.postMessage({ type: 'gitChanges', changes });
             
-            if (changes.length === 0) {
+            // Get both working tree and index (staged) changes
+            const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
+                path: change.uri.fsPath,
+                status: change.status,
+                staged: false
+            }));
+            
+            const stagedChanges = state.indexChanges.map((change: { uri: vscode.Uri; status: string }) => ({
+                path: change.uri.fsPath,
+                status: change.status,
+                staged: true
+            }));
+
+            const allChanges = [...workingChanges, ...stagedChanges];
+            webview.postMessage({ 
+                type: 'gitChanges', 
+                changes: allChanges,
+                hasStagedChanges: stagedChanges.length > 0
+            });
+            
+            if (allChanges.length === 0) {
                 webview.postMessage({ 
                     type: 'info', 
                     message: 'No changes detected'
