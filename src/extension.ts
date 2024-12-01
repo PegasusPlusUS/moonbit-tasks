@@ -25,6 +25,8 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
 }
 
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
+    private _webview?: vscode.Webview;
+
     constructor(private readonly _extensionUri: vscode.Uri) {}
 
     public resolveWebviewView(
@@ -32,6 +34,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        this._webview = webviewView.webview;
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
@@ -41,24 +44,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
                 case 'pull':
-                    await this.gitPull();
+                    await this.gitPull(webviewView.webview);
                     break;
                 case 'fetch':
-                    await this.gitFetch();
+                    await this.gitFetch(webviewView.webview);
                     break;
                 case 'stage':
                     if (data.files) {
-                        await this.gitStage(data.files);
+                        await this.gitStage(data.files, webviewView.webview);
                     }
                     break;
                 case 'commit':
                     if (data.message) {
-                        await this.gitCommit(data.message);
+                        await this.gitCommit(data.message, webviewView.webview);
                     }
                     break;
                 case 'commitAndPush':
                     if (data.message) {
-                        await this.gitCommitAndPush(data.message);
+                        await this.gitCommitAndPush(data.message, webviewView.webview);
                     }
                     break;
                 case 'getChanges':
@@ -136,9 +139,32 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             text-overflow: ellipsis;
                             white-space: nowrap;
                         }
+                        
+                        #statusArea {
+                            margin: 10px 0;
+                            padding: 8px;
+                            border-radius: 3px;
+                            display: none;  /* Hidden by default */
+                        }
+
+                        #statusArea.error {
+                            display: block;
+                            background: var(--vscode-inputValidation-errorBackground);
+                            border: 1px solid var(--vscode-inputValidation-errorBorder);
+                            color: var(--vscode-inputValidation-errorForeground);
+                        }
+
+                        #statusArea.info {
+                            display: block;
+                            background: var(--vscode-inputValidation-infoBackground);
+                            border: 1px solid var(--vscode-inputValidation-infoBorder);
+                            color: var(--vscode-inputValidation-infoForeground);
+                        }
                     </style>
                 </head>
                 <body>
+                    <div id="statusArea"></div>
+
                     <div class="button-container">
                         <button class="button" onclick="gitPull()">Pull</button>
                         <button class="button" onclick="gitFetch()">Fetch</button>
@@ -158,6 +184,42 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                     <script>
                         const vscode = acquireVsCodeApi();
+
+                        function showError(message) {
+                            const statusArea = document.getElementById('statusArea');
+                            statusArea.textContent = message;
+                            statusArea.className = 'error';
+                            // Auto-hide after 5 seconds
+                            setTimeout(() => {
+                                statusArea.style.display = 'none';
+                            }, 5000);
+                        }
+
+                        function showInfo(message) {
+                            const statusArea = document.getElementById('statusArea');
+                            statusArea.textContent = message;
+                            statusArea.className = 'info';
+                            // Auto-hide after 3 seconds
+                            setTimeout(() => {
+                                statusArea.style.display = 'none';
+                            }, 3000);
+                        }
+
+                        // Update the message handler
+                        window.addEventListener('message', event => {
+                            const message = event.data;
+                            switch (message.type) {
+                                case 'gitChanges':
+                                    updateFileTree(message.changes);
+                                    break;
+                                case 'error':
+                                    showError(message.message);
+                                    break;
+                                case 'info':
+                                    showInfo(message.message);
+                                    break;
+                            }
+                        });
 
                         // Initialize by getting changes
                         vscode.postMessage({ command: 'getChanges' });
@@ -195,16 +257,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         }
 
-                        // Handle messages from extension
-                        window.addEventListener('message', event => {
-                            const message = event.data;
-                            switch (message.type) {
-                                case 'gitChanges':
-                                    updateFileTree(message.changes);
-                                    break;
-                            }
-                        });
-
                         function updateFileTree(changes) {
                             const fileTree = document.getElementById('fileTree');
                             fileTree.innerHTML = changes.map(file => \`
@@ -221,54 +273,124 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     // Git command implementations
-    private async gitPull() {
+    private async gitPull(webview: vscode.Webview) {
         const git = await this.getGitAPI();
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            await repo.pull();
+            try {
+                await repo.pull();
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Pull successful'
+                });
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Pull failed: ' + (error.message || 'Unknown error')
+                });
+            }
         } else {
-            vscode.window.showErrorMessage('No Git repository found');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
-    private async gitFetch() {
+    private async gitFetch(webview: vscode.Webview) {
         const git = await this.getGitAPI();
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            await repo.fetch();
+            try {
+                await repo.fetch();
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Fetch successful'
+                });
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Fetch failed: ' + (error.message || 'Unknown error')
+                });
+            }
         } else {
-            vscode.window.showErrorMessage('No Git repository found');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
-    private async gitStage(files: string[]) {
+    private async gitStage(files: string[], webview: vscode.Webview) {
         const git = await this.getGitAPI();
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            await repo.add(files);
+            try {
+                await repo.add(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Files staged successfully'
+                });
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to stage files: ' + (error.message || 'Unknown error')
+                });
+            }
         } else {
-            vscode.window.showErrorMessage('No Git repository found');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
-    private async gitCommit(message: string) {
+    private async gitCommit(message: string, webview: vscode.Webview) {
         const git = await this.getGitAPI();
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            await repo.commit(message);
+            try {
+                await repo.commit(message);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes committed successfully'
+                });
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Commit failed: ' + (error.message || 'Unknown error')
+                });
+            }
         } else {
-            vscode.window.showErrorMessage('No Git repository found');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
-    private async gitCommitAndPush(message: string) {
+    private async gitCommitAndPush(message: string, webview: vscode.Webview) {
         const git = await this.getGitAPI();
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            await repo.commit(message);
-            await repo.push();
+            try {
+                await repo.commit(message);
+                await repo.push();
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes committed and pushed successfully'
+                });
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Commit and push failed: ' + (error.message || 'Unknown error')
+                });
+            }
         } else {
-            vscode.window.showErrorMessage('No Git repository found');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
@@ -277,20 +399,33 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const git = await this.getGitAPI();
             if (!git?.repositories?.length) {
                 webview.postMessage({ type: 'gitChanges', changes: [] });
-                vscode.window.showErrorMessage('No Git repository found');
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'No Git repository found'
+                });
                 return;
             }
 
             const repo = git.repositories[0];
-            const state = repo.state;  // Use state instead of getStatus
+            const state = repo.state;
             const changes = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
                 status: change.status
             }));
             webview.postMessage({ type: 'gitChanges', changes });
-        } catch (error) {
+            
+            if (changes.length === 0) {
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'No changes detected'
+                });
+            }
+        } catch (error: any) {
             webview.postMessage({ type: 'gitChanges', changes: [] });
-            vscode.window.showErrorMessage('Failed to get Git changes');
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
+            });
         }
     }
 
