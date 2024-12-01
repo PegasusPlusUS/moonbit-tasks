@@ -13,11 +13,12 @@ export const extension_name = "moonbit-tasks";
 export function active(context: vscode.ExtensionContext) {
 	langDef.activate(context);
 
-    registerGitTasksTreeView(context);
+    //registerGitTasksTreeView(context);
 	registerSmartTasksTreeView(context);
 	registerClickHandler(context);
 
 	registerActiveDocumentTracker(context);
+    activeDocumentChanges(vscode.window.activeTextEditor);
 }
 
 export function deactivate() {
@@ -54,12 +55,12 @@ function registerActiveDocumentTracker(context: vscode.ExtensionContext) {
 
 export const myGitTasksCustomViewID = 'myGitTasksCustomView';
 
-function registerGitTasksTreeView(context: vscode.ExtensionContext) {
-    let treeDataProvider = new MyGitTasksTreeDataProvider();
-    const treeView = vscode.window.registerTreeDataProvider(myGitTasksCustomViewID, treeDataProvider);
-    context.subscriptions.push(treeView);
-}
-
+// function registerGitTasksTreeView(context: vscode.ExtensionContext) {
+//     let treeDataProvider = new MyGitTasksTreeDataProvider();
+//     const treeView = vscode.window.registerTreeDataProvider(myGitTasksCustomViewID, treeDataProvider);
+//     context.subscriptions.push(treeView);
+// }
+//
 export const mySmartTasksCustomViewID = 'mySmartTasksCustomView';
 
 function registerSmartTasksTreeView(context: vscode.ExtensionContext) {

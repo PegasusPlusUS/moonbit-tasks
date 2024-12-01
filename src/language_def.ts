@@ -147,10 +147,11 @@ async function asyncInitLangDef() {
 			]))],
 			['Rust', new handlerInfo('Cargo.toml', new Map([
 				['Build', 'cargo b'],
-				['Cargo', 'cargo c'],
+				['Check', 'cargo c'],
 				['Run', 'cargo r'],
 				['Test','cargo t'],
 				['Format', 'cargo fmt'],
+				['Clippy', 'cargo clippy'],
 				['Coverage','cargo tarpaulin'],
 				['Doc', 'cargo d'],
 				['Clean', 'cargo clean'],
