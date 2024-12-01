@@ -20,6 +20,12 @@ V SMART TASKS
     Package
     Publish
 
+V GIT TASKS
+    pull
+    fetch
+    commit
+    commit|push
+
 Build -> 'moon build'
 Check -> 'moon check'
 Test -> 'moon test'
@@ -31,6 +37,11 @@ Update -> 'moon update'
 Upgrade -> 'moon upgrade'
 Package -> 'moon package'
 Publish -> 'moon publish'
+
+pull -> 'git pull'
+fetch -> 'git fetch'
+commit -> 'git commit -m "message"'
+commit|push -> 'git commit -m "message"; git push'
 
 Also support:
   Cangjie(cjpm)
