@@ -9,15 +9,16 @@ Create a "SMART TASKS" panel in EXPLORER workspace view
 > TIMELINE
 V SMART TASKS
     Build
-	Check
-	Test
-	Coverage
-	Run
-	Clean
-	Fmt
-	Update
-	Package
-	Publish
+    Check
+    Test
+    Coverage
+    Run
+    Clean
+    Fmt
+    Update
+    Upgrade
+    Package
+    Publish
 
 V GIT TASKS
     pull
@@ -28,11 +29,14 @@ V GIT TASKS
 Build -> 'moon build'
 Check -> 'moon check'
 Test -> 'moon test'
-Coverage -> 'moon `
+Coverage -> 'moon test --enable-coverage; moon coverage report' 
 Run -> 'moon run'
 Clean -> 'moon clean'
 Fmt -> 'moon fmt'
 Update -> 'moon update'
+Upgrade -> 'moon upgrade'
+Package -> 'moon package'
+Publish -> 'moon publish'
 
 pull -> 'git pull'
 fetch -> 'git fetch'
