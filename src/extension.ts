@@ -182,7 +182,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <div class="button-container">
-                        <button class="button" onclick="gitStage()">Stage</button>
+                        <button class="button" id="stageBtn" onclick="gitStage()" disabled>Stage</button>
                         <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
                         <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
                     </div>
@@ -216,7 +216,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
-                                    updateButtonStates(message.hasStagedChanges);
+                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges);
                                     break;
                                 case 'error':
                                     showError(message.message);
