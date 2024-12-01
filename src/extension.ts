@@ -182,7 +182,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <div class="button-container">
-                        <button class="button" id="stageBtn" onclick="gitStage()" disabled>Stage</button>
+                        <button class="button" onclick="gitStage()">Stage</button>
                         <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
                         <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
                     </div>
@@ -216,7 +216,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
-                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges);
+                                    updateButtonStates(message.hasStagedChanges);
                                     break;
                                 case 'error':
                                     showError(message.message);
@@ -238,6 +238,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'fetch' });
                         }
 
+                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges) {
+                            const stageBtn = document.getElementById('stageBtn');
+                            const commitBtn = document.getElementById('commitBtn');
+                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
+                            const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
+                            
+                            stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
+                            commitBtn.disabled = !hasStagedChanges;
+                            commitAndPushBtn.disabled = !hasStagedChanges;
+                        }
+
+                        // Add listener for checkbox changes
+                        document.addEventListener('change', event => {
+                            if (event.target.type === 'checkbox') {
+                                const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
+                                const stageBtn = document.getElementById('stageBtn');
+                                stageBtn.disabled = checkedFiles.length === 0;
+                            }
+                        });
+
                         function gitStage() {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
                                 .map(cb => cb.getAttribute('data-file'));
@@ -251,28 +271,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         function gitCommit() {
                             const message = document.getElementById('commitMessage').value;
-                            vscode.postMessage({ 
-                                command: 'commit',
-                                message: message
-                            });
+                            if (message.trim()) {
+                                vscode.postMessage({ 
+                                    command: 'commit',
+                                    message: message
+                                });
+                                document.getElementById('commitMessage').value = ''; // Clear message after commit
+                            }
                         }
 
                         function gitCommitAndPush() {
                             const message = document.getElementById('commitMessage').value;
-                            vscode.postMessage({ 
-                                command: 'commitAndPush',
-                                message: message
-                            });
-                        }
-
-                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges) {
-                            const stageBtn = document.getElementById('stageBtn');
-                            const commitBtn = document.getElementById('commitBtn');
-                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
-                            
-                            stageBtn.disabled = !hasUnstagedChanges;
-                            commitBtn.disabled = !hasStagedChanges;
-                            commitAndPushBtn.disabled = !hasStagedChanges;
+                            if (message.trim()) {
+                                vscode.postMessage({ 
+                                    command: 'commitAndPush',
+                                    message: message
+                                });
+                                document.getElementById('commitMessage').value = ''; // Clear message after commit
+                            }
                         }
 
                         function updateFileTree(changes) {
@@ -349,6 +365,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     type: 'info', 
                     message: 'Files staged successfully'
                 });
+                await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
@@ -373,6 +390,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     type: 'info', 
                     message: 'Changes committed successfully'
                 });
+                await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
@@ -398,6 +416,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     type: 'info', 
                     message: 'Changes committed and pushed successfully'
                 });
+                await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
