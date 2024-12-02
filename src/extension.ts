@@ -637,11 +637,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public updateTreeView(webview: vscode.Webview, items: Array<{ id: string, label: string, icon?: string }>) {
         if (mbTaskExt.smartCommands.length == 0) {
             items = [
-                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: '📁' },
+                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: '$(info)' },
             ];
         } else {
-            items = mbTaskExt.smartCommands.map(str => ({ id: str, label: str, icon: '📁'}));
+            items = mbTaskExt.smartCommands.map(str => ({ id: str, label: str, icon: '$(gear'}));
         }
+        //     { id: '1', label: 'Build ', icon: '📁' },
+        //     { id: '2', label: 'Test ', icon: '📄' },
+        //     { id: '3', label: 'Package', icon: '🔧' }
+    
         webview.postMessage({
             type: 'updateTree',
             items: items

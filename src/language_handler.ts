@@ -51,6 +51,7 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
     smartCommands = [];
 
     vscode.commands.executeCommand('moonbit-tasks.updateTreeView', []);
+    
     let result = await detectProjectForActiveDocument();
 
     if (result == undefined || result.handler == undefined) {
@@ -61,11 +62,7 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
         smartCommands = Array.from(result.handler.commands.keys());
     }
 
-    vscode.commands.executeCommand('moonbit-tasks.updateTreeView', [
-    //     { id: '1', label: 'Build ', icon: '📁' },
-    //     { id: '2', label: 'Test ', icon: '📄' },
-    //     { id: '3', label: 'Package', icon: '🔧' }
-    ]);
+    vscode.commands.executeCommand('moonbit-tasks.updateTreeView', []);
 }
 
 export const onSmartTasksViewItemClickEventName = '.onSmartTasksViewItemClick';
