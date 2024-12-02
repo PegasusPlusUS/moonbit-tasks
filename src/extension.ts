@@ -1,4 +1,5 @@
 import * as mbTaskExt from './language_handler';
+import * as smartTaskExt from './smart_tasks_panel_provider';
 
 import * as vscode from 'vscode';
 
@@ -9,7 +10,7 @@ interface GitExtension {
 
 export function activate(context: vscode.ExtensionContext) {
     registerGitTasksWebview(context);
-	mbTaskExt.active(context);
+    mbTaskExt.active(context);
 }
 
 export function deactivate() {
@@ -19,13 +20,28 @@ export function deactivate() {
 function registerGitTasksWebview(context: vscode.ExtensionContext) {
     // Register Smart Tasks Webview
     const gitTasksProvider = new TasksWebviewProvider(context.extensionUri);
+    // Register the command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.updateTreeView', (items: Array<{ id: string, label: string, icon?: string }>) => {
+            if (gitTasksProvider._webview) {
+                gitTasksProvider.updateTreeView(gitTasksProvider._webview, items);
+            }
+        })
+    );
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider('myGitTasksCustomView', gitTasksProvider)
+    );
+    // Register the tree item selected command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.treeItemSelected', async(itemId: string) => {
+            await smartTaskExt.smartTaskRun(itemId);
+        })
     );
 }
 
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
-    private _webview?: vscode.Webview;
+    public static readonly viewType = 'moonbit-tasks.gitView';
+    public _webview?: vscode.Webview;  // Made public so command can access it
 
     constructor(private readonly _extensionUri: vscode.Uri) {}
 
@@ -67,6 +83,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 case 'getChanges':
                     await this.getGitChanges(webviewView.webview);
                     break;
+                case 'treeItemSelected':
+                    // Execute the command when tree item is selected
+                    vscode.commands.executeCommand('moonbit-tasks.treeItemSelected', data.itemId);
+                    break;
             }
         });
 
@@ -80,7 +100,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Git Tasks</title>
+                    <title>Smart Tasks</title>
                     <style>
                         body { 
                             padding: 10px; 
@@ -114,7 +134,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             color: var(--vscode-input-foreground);
                             border: 1px solid var(--vscode-input-border);
                             resize: vertical; /* Only allow vertical resizing */
-                            min-height: 60px;
+                            min-height: 50px;
                             max-height: 200px;
                         }
                         .file-tree {
@@ -212,7 +232,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <button class="button" onclick="gitFetch()">Fetch</button>
                     </div>
                     
-                    <textarea id="commitMessage" placeholder="Enter commit message..." rows="3"></textarea>
+                    <textarea id="commitMessage" placeholder="Enter commit message..." rows="2"></textarea>
                     
                     <div id="fileTree" class="file-tree">
                         <!-- Git changes will be populated here -->
@@ -612,6 +632,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             });
             return undefined;
         }
+    }
+
+    public updateTreeView(webview: vscode.Webview, items: Array<{ id: string, label: string, icon?: string }>) {
+        if (mbTaskExt.smartCommands.length == 0) {
+            items = [
+                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: '📁' },
+            ];
+        } else {
+            items = mbTaskExt.smartCommands.map(str => ({ id: str, label: str, icon: '📁'}));
+        }
+        webview.postMessage({
+            type: 'updateTree',
+            items: items
+        });
     }
 }
 

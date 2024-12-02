@@ -4,7 +4,7 @@ import { access as fsAccess, constants as fsConstants, promises as fsPromises } 
 
 import * as helper from './helper';
 import * as langDef from './language_def';
-import { MySmartTasksTreeDataProvider, mySmartTasksCustomViewID, refereshSmartTasksDataProvider } from "./language_handler";
+import { refereshSmartTasksDataProvider } from "./language_handler";
 import os from "os";
 
 let myTerminal: vscode.Terminal | undefined;
@@ -132,35 +132,6 @@ export async function smartTaskRun(cmd: string) {
 }
 
 export function deactivate() {}
-
-export async function gitTaskRun(cmd: string) {
-	// Get the current active file in the Explorer
-	const activeEditor = vscode.window.activeTextEditor;
-	if (activeEditor) {
-		const filePath = activeEditor.document.uri.fsPath;
-		const fileDir = path.dirname(filePath);  // Get the directory of the current file
-		let shellCommand = langDef.gitDef.get(cmd);
-		if (shellCommand != undefined) {
-			// git commit need message
-			if (cmd.startsWith('commit')) {
-				const userInput = await vscode.window.showInputBox({
-					prompt: 'Please enter commit message',
-					placeHolder: 'Message for commit:'
-				});
-
-				if (userInput !== undefined) {
-					shellCommand = shellCommand.replace('${param}', userInput);
-				}
-			}
-			runCmdInTerminal(shellCommand, fileDir);
-		}
-		else {
-			//vscode.window.showWarningMessage(`Can't find any project signature file.`);
-		}
-	} else {
-		//vscode.window.showWarningMessage("No active file found.");
-	}
-}
 
 async function searchSignatureFromWorkSpace(fileDir: string, handler: langDef.handlerInfo | undefined, projectDir: string | undefined) {
 	const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -334,7 +305,6 @@ export async function activeDocumentChanges(editor:any) {
 		if (refresh) {
 			lastActiveDocumentDir = documentDir;
 			refereshSmartTasksDataProvider(documentDir);
-			//vscode.window.showInformationMessage(root_title);
 		}
 	} else {
 		// console.log("No active editor.");

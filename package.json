@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120201",
+  "version": "0.12.2024120203",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -48,28 +48,16 @@
     "views": {
       "explorer": [
         {
-          "id": "mySmartTasksCustomView",
-          "name": "Smart Tasks"
-        },
-        {
           "id": "myGitTasksCustomView",
-          "name": "Git Tasks",
+          "name": "Smart Tasks",
           "type": "webview"
         }
       ]
     },
     "commands": [
       {
-        "command": "mySmartTasksCustomView.refresh",
-        "title": "Refresh My Smart Tasks View"
-      },
-      {
         "command": "moonbit-tasks.onSmartTasksViewItemClick",
         "title": "On Smart Tasks View Item Click"
-      },
-      {
-        "command": "moonbit-tasks.onGitTasksViewItemClick",
-        "title": "On Git Tasks View Item Click"
       }
     ]
   },
