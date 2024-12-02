@@ -165,6 +165,43 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             cursor: not-allowed;
                             background: var(--vscode-button-secondaryBackground);
                         }
+
+                        .tree-view {
+                            margin-top: 10px;
+                            border: 1px solid var(--vscode-input-border);
+                            border-radius: 3px;
+                            max-height: 200px;
+                            overflow-y: auto;
+                        }
+
+                        .tree-item {
+                            padding: 4px 8px;
+                            display: flex;
+                            align-items: center;
+                            cursor: pointer;
+                        }
+
+                        .tree-item:hover {
+                            background: var(--vscode-list-hoverBackground);
+                        }
+
+                        .tree-item.selected {
+                            background: var(--vscode-list-activeSelectionBackground);
+                            color: var(--vscode-list-activeSelectionForeground);
+                        }
+
+                        .tree-item-icon {
+                            margin-right: 5px;
+                            width: 16px;
+                            height: 16px;
+                        }
+
+                        .tree-item-label {
+                            flex-grow: 1;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
                     </style>
                 </head>
                 <body>
@@ -186,6 +223,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
                         <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
                     </div>
+
+                    <div id="treeView" class="tree-view"></div>
 
                     <script>
                         const vscode = acquireVsCodeApi();
@@ -311,6 +350,49 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function getGitChanges() {
                             vscode.postMessage({ command: 'getChanges' });
                         }
+
+                        function updateTreeView(items) {
+                            const treeView = document.getElementById('treeView');
+                            if (!items || !Array.isArray(items)) {
+                                treeView.innerHTML = '';
+                                return;
+                            }
+                            
+                            const itemsHtml = items.map(function(item) {
+                                return \`
+                                    <div class="tree-item" data-id="\${item.id}" onclick="selectTreeItem(this)">
+                                        <span class="tree-item-icon">\${item.icon || ''}</span>
+                                        <span class="tree-item-label">\${item.label}</span>
+                                    </div>
+                                \`;
+                            }).join('');
+                            
+                            treeView.innerHTML = itemsHtml;
+                        }
+
+                        function selectTreeItem(element) {
+                            document.querySelectorAll('.tree-item.selected').forEach(item => {
+                                item.classList.remove('selected');
+                            });
+                            
+                            element.classList.add('selected');
+                            
+                            vscode.postMessage({
+                                command: 'treeItemSelected',
+                                itemId: element.dataset.id
+                            });
+                        }
+
+                        // Update message handler to handle tree data
+                        window.addEventListener('message', event => {
+                            const message = event.data;
+                            switch (message.type) {
+                                case 'updateTree':
+                                    updateTreeView(message.items);
+                                    break;
+                                // ... existing cases ...
+                            }
+                        });
                     </script>
                 </body>
             </html>
