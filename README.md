@@ -222,3 +222,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ### 0.12.2024120205
 
 - Smart Tasks Webview
+
+### 0.12.2024120206
+
+- Smart Tasks visibility management

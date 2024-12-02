@@ -56,6 +56,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
+        // Listen for visibility changes
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible) {
+                // View became visible
+                mbTaskExt.refereshSmartTasksDataProvider("");
+            } else {
+                // View was hidden
+                //this.onViewHidden();
+            }
+        });
+
         // Handle messages from the webview
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.command) {
@@ -90,6 +101,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }
         });
 
+        this.updateTreeView(webviewView.webview, []);
         webviewView.webview.html = this._getHtmlContent(webviewView.webview);
     }
 
