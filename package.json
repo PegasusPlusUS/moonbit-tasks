@@ -35,6 +35,12 @@
           "type": "string",
           "default": "",
           "description": "Define cmd for language"
+        },
+        "moonbit-tasks.currentRepository": {
+          "type": "string",
+          "default": "",
+          "description": "Path of the currently selected Git repository",
+          "scope": "window"
         }
       }
     },
