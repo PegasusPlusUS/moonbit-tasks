@@ -86,9 +86,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         await this.gitCommit(data.message, webviewView.webview);
                     }
                     break;
-                case 'commitAndPush':
+                case 'push':
                     if (data.message) {
-                        await this.gitCommitAndPush(data.message, webviewView.webview);
+                        await this.gitPush(data.message, webviewView.webview);
                     }
                     break;
                 case 'getChanges':
@@ -304,10 +304,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             <!-- Commit Area -->
                             <div class="commit-area">
-                                <textarea id="commitMessage" placeholder="Enter commit message..." rows="2"></textarea>
+                                <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
                                 <div class="button-container">
                                     <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                                    <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
+                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled>Push</button>
                                 </div>
                             </div>
 
@@ -370,7 +370,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
-                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges);
+                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges, message.hasUnpushedCommits);
                                     break;
                                 case 'error':
                                     showMessage(message.message, 'error');
@@ -392,15 +392,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'fetch' });
                         }
 
-                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges) {
+                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
                             const stageBtn = document.getElementById('stageBtn');
                             const commitBtn = document.getElementById('commitBtn');
-                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
-                            const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
+                            const pushBtn = document.getElementById('pushBtn');
                             
-                            stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
-                            commitBtn.disabled = !hasStagedChanges;
-                            commitAndPushBtn.disabled = !hasStagedChanges;
+                            if (stageBtn) {
+                                stageBtn.disabled = !hasUnstagedChanges;
+                            }
+                            if (commitBtn) {
+                                commitBtn.disabled = !hasStagedChanges;
+                            }
+                            if (pushBtn) {
+                                pushBtn.disabled = !hasUnpushedCommits && !hasStagedChanges;
+                            }
                         }
 
                         function getFileName(fullpath) {
@@ -450,11 +455,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // Update commit button states
                             const commitBtn = document.getElementById('commitBtn');
-                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
-                            if (commitBtn && commitAndPushBtn) {
+                            const pushBtn = document.getElementById('pushBtn');
+                            if (commitBtn && pushBtn) {
                                 const hasStagedChanges = stagedChanges.length > 0;
                                 commitBtn.disabled = !hasStagedChanges;
-                                commitAndPushBtn.disabled = !hasStagedChanges;
+                                pushBtn.disabled = !hasUnpushedCommits;
                             }
                         }
 
@@ -485,11 +490,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
                         }
 
-                        function gitCommitAndPush() {
+                        function gitPush() {
                             const message = document.getElementById('commitMessage').value;
                             if (message.trim()) {
-                                vscode.postMessage({ 
-                                    command: 'commitAndPush',
+                                vscode.postMessage({
+                                    command: 'push',
                                     message: message
                                 });
                                 document.getElementById('commitMessage').value = ''; // Clear message after commit
@@ -710,7 +715,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async gitCommitAndPush(message: string, webview: vscode.Webview) {
+    private async gitPush(message: string, webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
@@ -744,7 +749,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     type: 'gitChanges', 
                     changes: [], 
                     hasStagedChanges: false,
-                    hasUnstagedChanges: false 
+                    hasUnstagedChanges: false,
+                    hasUnpushedCommits: false
                 });
                 webview.postMessage({ 
                     type: 'error', 
@@ -768,12 +774,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 staged: true
             }));
 
+            // Check for unpushed commits
+            const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
+
             const allChanges = [...workingChanges, ...stagedChanges];
+            
+            // Send changes to webview
             webview.postMessage({ 
                 type: 'gitChanges', 
                 changes: allChanges,
                 hasStagedChanges: stagedChanges.length > 0,
-                hasUnstagedChanges: workingChanges.length > 0
+                hasUnstagedChanges: workingChanges.length > 0,
+                hasUnpushedCommits: hasUnpushedCommits
             });
             
             if (allChanges.length === 0) {
@@ -781,21 +793,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     type: 'info', 
                     message: 'No changes detected'
                 });
-                // Ensure buttons are disabled when no changes exist
-                webview.postMessage({ 
-                    type: 'gitChanges', 
-                    changes: [],
-                    hasStagedChanges: false,
-                    hasUnstagedChanges: false
-                });
             }
         } catch (error: any) {
-            webview.postMessage({ 
-                type: 'gitChanges', 
-                changes: [], 
-                hasStagedChanges: false,
-                hasUnstagedChanges: false
-            });
             webview.postMessage({ 
                 type: 'error', 
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
