@@ -289,15 +289,21 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- Git Source Control Panel -->
                         <div class="git-panel">
                             <div class="section-header">Git</div>
+
+                            <!-- Git Actions -->
+                            <div class="button-container" style="padding: 8px;">
+                                <button class="button" onclick="gitPull()">Pull </button>
+                                <button class="button" onclick="gitFetch()">Fetch</button>
+                            </div>
                             
                             <!-- Changes section -->
-                            <div class="section-header" style="font-size: 0.9em;">Changes</div>
+                            <div id="changesHeader" class="section-header" style="font-size: 0.9em;">Changes</div>
                             <div id="changesTree" class="file-tree">
                                 <!-- Changed files will be populated here -->
                             </div>
 
                             <!-- Staged section -->
-                            <div class="section-header" style="font-size: 0.9em;">Staged Changes</div>
+                            <div id="stagedHeader" class="section-header" style="font-size: 0.9em;">Staged Changes</div>
                             <div id="stagedTree" class="file-tree">
                                 <!-- Staged files will be populated here -->
                             </div>
@@ -307,14 +313,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
                                 <div class="button-container">
                                     <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled>Push</button>
+                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled> Push </button>
                                 </div>
-                            </div>
-
-                            <!-- Git Actions -->
-                            <div class="button-container" style="padding: 8px;">
-                                <button class="button" onclick="gitPull()">Pull</button>
-                                <button class="button" onclick="gitFetch()">Fetch</button>
                             </div>
                         </div>
 
@@ -370,7 +370,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             switch (message.type) {
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
-                                    updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges, message.hasUnpushedCommits);
+                                    updateButtonStates(
+                                        message.hasStagedChanges,
+                                        message.hasUnstagedChanges,
+                                        message.hasUnpushedCommits
+                                    );
                                     break;
                                 case 'error':
                                     showMessage(message.message, 'error');
@@ -393,14 +397,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function updateButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
-                            const stageBtn = document.getElementById('stageBtn');
+                            console.log('Button states:', { hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits }); // Debug log
                             const commitBtn = document.getElementById('commitBtn');
                             const commitMessage = document.getElementById('commitMessage');
                             const pushBtn = document.getElementById('pushBtn');
                             
-                            if (stageBtn) {
-                                stageBtn.disabled = !hasUnstagedChanges;
-                            }
                             if (commitMessage) {
                                 commitMessage.disabled = !hasStagedChanges;
                             }
@@ -408,7 +409,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 commitBtn.disabled = !hasStagedChanges && commitMessage && commitMessage.value.trim() === '';
                             }
                             if (pushBtn) {
-                                pushBtn.disabled = !hasUnpushedCommits && !hasStagedChanges;
+                                // Enable push button if there are unpushed commits
+                                pushBtn.disabled = !hasUnpushedCommits;
                             }
                         }
 
@@ -428,6 +430,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const unstagedChanges = changes.filter(file => !file.staged);
                             const stagedChanges = changes.filter(file => file.staged);
 
+                            const changesHeader = document.getElementById('changesHeader');
+                            if (changesHeader) {
+                                if (unstagedChanges.length > 0) {
+                                    changesHeader.visible = true;
+                                    changesHeader.textContent = 'Changes (' + unstagedChanges.length + ')';
+                                } else {
+                                    changesHeader.textContent = 'Changes';
+                                    changesHeader.visible = false;
+                                }
+                            }
+
+                            const stagedHeader = document.getElementById('stagedHeader');
+                            if (stagedHeader) {
+                                if (stagedChanges.length > 0) {
+                                    stagedHeader.visible = true;
+                                    stagedHeader.textContent = 'Staged (' + stagedChanges.length + ')';
+                                } else {
+                                    stagedHeader.textContent = 'Staged';
+                                    stagedHeader.visible = false;
+                                }
+                            }
+
                             // Render unstaged changes
                             changesTree.innerHTML = unstagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
@@ -445,7 +469,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // Render staged changes
                             stagedTree.innerHTML = stagedChanges.map(file => {
-                                const fileName = file.path.split(/[\\\\/]/).pop(); // Handle both forward and backslashes
+                                const fileName = getFileName(file.path);
                                 return \`
                                     <div class="file-item" data-file="\${file.path}">
                                         <span class="file-name">\${fileName}</span>
@@ -456,15 +480,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     </div>
                                 \`;
                             }).join('');
-
-                            // Update commit button states
-                            const commitBtn = document.getElementById('commitBtn');
-                            const pushBtn = document.getElementById('pushBtn');
-                            if (commitBtn && pushBtn) {
-                                const hasStagedChanges = stagedChanges.length > 0;
-                                commitBtn.disabled = !hasStagedChanges;
-                                pushBtn.disabled = !hasUnpushedCommits;
-                            }
                         }
 
                         // Add auto-refresh for changes (every 5 seconds)
