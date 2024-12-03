@@ -739,17 +739,16 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
             try {
-                await repo.commit(message);
                 await repo.push();
                 webview.postMessage({ 
                     type: 'info', 
-                    message: 'Changes committed and pushed successfully'
+                    message: 'Push successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
-                    message: 'Commit and push failed: ' + (error.message || 'Unknown error')
+                    message: 'Push failed: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
