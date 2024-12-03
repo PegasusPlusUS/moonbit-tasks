@@ -966,13 +966,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
 
-            // Rest of the code remains the same...
-            const branches = state.refs.filter((ref: any) => ref.type === 1).map((branch: any) => ({
-                name: branch.name || '',
-                remote: branch.remote || false,
-                upstream: branch.upstream?.name || ''
-            }));
-            
+            // Use getRefs() instead of accessing state.refs directly
+            const refs = await repo.getRefs();
+            console.log('Refs:', refs); // Debug log
+
+            const branches = refs
+                .filter((ref: any) => {
+                    // Include both local and remote branches, excluding HEAD
+                    return ref.name && ref.name !== 'HEAD';
+                })
+                .map((branch: any) => ({
+                    name: branch.name || '',
+                    remote: branch.remote || false,
+                    upstream: branch.upstream?.name || ''
+                }));
+
+            console.log('Processed branches:', branches); // Debug log
+
             const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
                 status: change.status,
@@ -1008,6 +1018,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 });
             }
         } catch (error: any) {
+            console.error('Error in getGitChanges:', error);
             webview.postMessage({ 
                 type: 'error', 
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
