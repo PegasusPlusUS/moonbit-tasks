@@ -136,12 +136,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         const git = await this.getGitAPI(webviewView.webview);
                         if (git?.repositories.length > 0) {
                             // Get the current repository path and find its index
-                            const currentRepoPath = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+                            const currentRepoPath = await this.getCurrentRepositoryPath();
                             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
                             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
                             
                             try {
                                 await repo.checkout(data.branch);
+                                // Save the selected branch
+                                await this.saveCurrentBranch(data);
                                 await this.getGitChanges(webviewView.webview);
                             } catch (error: any) {
                                 webviewView.webview.postMessage({
@@ -183,6 +185,32 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         return path;
+    }
+
+    private currentBranch: string = '';
+
+    private async saveCurrentBranch(data: any) {
+        try {
+            await vscode.workspace.getConfiguration().update('moonbit-tasks.currentBranch', data.branch, true);
+        } catch (error: any) {
+            console.error('Failed to save current branch:', error);
+            this.currentBranch = data.Branch;
+        }
+    }
+
+    private async getCurrentBranch() {
+        let branch : string | undefined = undefined;
+        try {
+            branch = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentBranch');
+        } catch (error: any) {
+            console.error('Failed to get current branch:', error);
+        }
+
+        if (branch === undefined) {
+            branch = this.currentBranch;
+        }
+
+        return branch;
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
@@ -999,13 +1027,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             const allChanges = [...workingChanges, ...stagedChanges];
             
+            // Get current branch from repository state
+            const currentBranch = repo.state.HEAD?.name || '';
+            console.log('Current branch:', currentBranch); // Debug log
+
             webview.postMessage({ 
                 type: 'gitChanges', 
                 changes: allChanges,
                 repositories: repositories,
                 branches: branches,
                 currentRepo: repo.rootUri.path,
-                currentBranch: state.HEAD?.name || '',
+                currentBranch: currentBranch,  // Use the current branch from repo state
                 hasStagedChanges: stagedChanges.length > 0,
                 hasUnstagedChanges: workingChanges.length > 0,
                 hasUnpushedCommits: hasUnpushedCommits
