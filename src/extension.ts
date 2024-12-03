@@ -217,6 +217,30 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .file-item:hover .tooltip {
                             display: block;
                         }
+
+                        .status-message {
+                            position: fixed;
+                            bottom: 20px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            z-index: 1000;
+                            display: none;
+                        }
+
+                        .status-message.error {
+                            background: var(--vscode-inputValidation-errorBackground);
+                            border: 1px solid var(--vscode-inputValidation-errorBorder);
+                            color: var(--vscode-inputValidation-errorForeground);
+                        }
+
+                        .status-message.info {
+                            background: var(--vscode-inputValidation-infoBackground);
+                            border: 1px solid var(--vscode-inputValidation-infoBorder);
+                            color: var(--vscode-inputValidation-infoForeground);
+                        }
                     </style>
                 </head>
                 <body>
@@ -262,6 +286,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         </div>
                     </div>
 
+                    <div id="statusMessage" class="status-message"></div>
+
                     <script>
                         const vscode = acquireVsCodeApi();
 
@@ -285,6 +311,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }, 3000);
                         }
 
+                        function showMessage(message, type = 'info') {
+                            const statusMessage = document.getElementById('statusMessage');
+                            statusMessage.textContent = message;
+                            statusMessage.className = 'status-message ' + type;
+                            statusMessage.style.display = 'block';
+
+                            // Auto-hide after a delay
+                            setTimeout(() => {
+                                statusMessage.style.display = 'none';
+                            }, type === 'error' ? 5000 : 3000); // Show errors longer than info messages
+                        }
+
                         // Update the message handler
                         window.addEventListener('message', event => {
                             const message = event.data;
@@ -294,10 +332,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     updateButtonStates(message.hasStagedChanges, message.hasUnstagedChanges);
                                     break;
                                 case 'error':
-                                    showError(message.message);
+                                    showMessage(message.message, 'error');
                                     break;
                                 case 'info':
-                                    showInfo(message.message);
+                                    showMessage(message.message, 'info');
                                     break;
                             }
                         });
@@ -327,6 +365,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function getFileName(fullpath) {
                             return fullpath.split(/[\\\\/]/).pop();
                         }
+                        
+                        function doubleEscape(str) {
+                            return str.replace(/\\\\/g, '\\\\\\\\');
+                        }
 
                         function updateFileTree(changes) {
                             const changesTree = document.getElementById('changesTree');
@@ -344,8 +386,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="stageFile('\${file.path}')" title="Stage Changes">+</button>
-                                            <button class="action-button" onclick="discardFile('\${file.path}')" title="Discard Changes">⨯</button>
+                                            <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
+                                            <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
                                         </div>
                                     </div>
                                 \`;
@@ -359,7 +401,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="unstageFile('\${file.path}')" title="Unstage Changes">-</button>
+                                            <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
                                         </div>
                                     </div>
                                 \`;
@@ -545,13 +587,58 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 await repo.add(files);
                 webview.postMessage({ 
                     type: 'info', 
-                    message: 'Changes staged successfully'
+                    message: 'Files staged successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
-                    message: 'Failed to stage changes: ' + (error.message || 'Unknown error')
+                    message: 'Failed to stage files: ' + files[0] + ' ' + (error.message || 'Unknown error')
+                });
+            }
+        } else {
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
+        }
+    }
+
+    private async gitUnstage(files: string[], webview: vscode.Webview) {
+        const git = await this.getGitAPI(webview);
+        if (git && git.repositories.length > 0) {
+            const repo = git.repositories[0];
+            try {
+                await repo.revert(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes unstaged successfully'
+                });
+                await this.getGitChanges(webview); // Refresh status
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to unstage changes: ' + (error.message || 'Unknown error')
+                });
+            }
+        }
+    }
+
+    private async gitDiscard(files: string[], webview: vscode.Webview) {
+        const git = await this.getGitAPI(webview);
+        if (git && git.repositories.length > 0) {
+            const repo = git.repositories[0];
+            try {
+                await repo.clean(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes discarded successfully'
+                });
+                await this.getGitChanges(webview); // Refresh status
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
                 });
             }
         }
@@ -714,45 +801,5 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             type: 'updateTree',
             items: items
         });
-    }
-
-    private async gitUnstage(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
-            try {
-                await repo.revert(files);
-                webview.postMessage({ 
-                    type: 'info', 
-                    message: 'Changes unstaged successfully'
-                });
-                await this.getGitChanges(webview); // Refresh status
-            } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
-                    message: 'Failed to unstage changes: ' + (error.message || 'Unknown error')
-                });
-            }
-        }
-    }
-
-    private async gitDiscard(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
-            try {
-                await repo.clean(files);
-                webview.postMessage({ 
-                    type: 'info', 
-                    message: 'Changes discarded successfully'
-                });
-                await this.getGitChanges(webview); // Refresh status
-            } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
-                    message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
-                });
-            }
-        }
     }
 }
