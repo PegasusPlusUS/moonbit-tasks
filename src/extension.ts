@@ -395,13 +395,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
                             const stageBtn = document.getElementById('stageBtn');
                             const commitBtn = document.getElementById('commitBtn');
+                            const commitMessage = document.getElementById('commitMessage');
                             const pushBtn = document.getElementById('pushBtn');
                             
                             if (stageBtn) {
                                 stageBtn.disabled = !hasUnstagedChanges;
                             }
+                            if (commitMessage) {
+                                commitMessage.disabled = !hasStagedChanges;
+                            }
                             if (commitBtn) {
-                                commitBtn.disabled = !hasStagedChanges;
+                                commitBtn.disabled = !hasStagedChanges && commitMessage && commitMessage.value.trim() === '';
                             }
                             if (pushBtn) {
                                 pushBtn.disabled = !hasUnpushedCommits && !hasStagedChanges;
