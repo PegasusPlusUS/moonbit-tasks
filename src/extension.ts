@@ -8,6 +8,19 @@ interface GitExtension {
     getAPI(version: number): Promise<any>;
 }
 
+interface GitRepository {
+    rootUri: { path: string };
+    // ... other properties
+}
+
+interface GitRef {
+    type: number;
+    name: string;
+    remote: boolean;
+    upstream?: { name: string };
+    // ... other properties
+}
+
 export function activate(context: vscode.ExtensionContext) {
     registerGitTasksWebview(context);
     mbTaskExt.active(context);
@@ -104,6 +117,39 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 case 'discard':
                     if (data.files) {
                         await this.gitDiscard(data.files, webviewView.webview);
+                    }
+                    break;
+                case 'switchRepository':
+                    if (data.path) {
+                        const git = await this.getGitAPI(webviewView.webview);
+                        const newRepo = git?.repositories.find((r: any) => r.rootUri.path === data.path);
+                        if (newRepo) {
+                            // Save the selected repository path
+                            await vscode.workspace.getConfiguration().update('moonbit-tasks.currentRepository', data.path, true);
+                            // Switch to the selected repository
+                            await this.getGitChanges(webviewView.webview);
+                        }
+                    }
+                    break;
+                case 'switchBranch':
+                    if (data.branch) {
+                        const git = await this.getGitAPI(webviewView.webview);
+                        if (git?.repositories.length > 0) {
+                            // Get the current repository path and find its index
+                            const currentRepoPath = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+                            const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
+                            const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
+                            
+                            try {
+                                await repo.checkout(data.branch);
+                                await this.getGitChanges(webviewView.webview);
+                            } catch (error: any) {
+                                webviewView.webview.postMessage({
+                                    type: 'error',
+                                    message: 'Failed to switch branch: ' + (error.message || 'Unknown error')
+                                });
+                            }
+                        }
                     }
                     break;
             }
@@ -310,13 +356,48 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             margin: 8px;
                             justify-content: space-between;
                         }
+
+                        .header-controls {
+                            display: flex;
+                            gap: 8px;
+                            align-items: center;
+                            padding: 4px 0;
+                        }
+
+                        .select-control {
+                            background: var(--vscode-dropdown-background);
+                            color: var(--vscode-dropdown-foreground);
+                            border: 1px solid var(--vscode-dropdown-border);
+                            padding: 2px 4px;
+                            border-radius: 2px;
+                            font-size: 12px;
+                            min-width: 120px;
+                        }
+
+                        .select-control:hover {
+                            cursor: pointer;
+                        }
+
+                        .select-control option {
+                            background: var(--vscode-dropdown-listBackground);
+                            color: var(--vscode-dropdown-foreground);
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="panel-container">
                         <!-- Git Source Control Panel -->
                         <div class="git-panel">
-                            <div class="section-header">Git</div>
+                            <div class="section-header">
+                                <div class="header-controls">
+                                    <select id="repoSelect" class="select-control" title="Select Repository">
+                                        <!-- Repositories will be populated here -->
+                                    </select>
+                                    <select id="branchSelect" class="select-control" title="Select Branch">
+                                        <!-- Branches will be populated here -->
+                                    </select>
+                                </div>
+                            </div>
 
                             <!-- Git Actions -->
                             <div class="button-container">
@@ -402,6 +483,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         message.hasStagedChanges,
                                         message.hasUnstagedChanges,
                                         message.hasUnpushedCommits
+                                    );
+                                    updateRepositoryAndBranchLists(
+                                        message.repositories,
+                                        message.branches,
+                                        message.currentRepo,
+                                        message.currentBranch
                                     );
                                     break;
                                 case 'error':
@@ -613,6 +700,46 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 });
                             }
                         }
+
+                        function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
+                            const repoSelect = document.getElementById('repoSelect');
+                            const branchSelect = document.getElementById('branchSelect');
+
+                            // Update repository list
+                            if (repoSelect) {
+                                repoSelect.innerHTML = repositories.map(repo => 
+                                    '<option value="' + repo.path + '" title="' + repo.path + '" ' + 
+                                    (repo.path === currentRepo ? 'selected' : '') + '>' +
+                                    repo.name +
+                                    '</option>'
+                                ).join('');
+                            }
+
+                            // Update branch list
+                            if (branchSelect) {
+                                branchSelect.innerHTML = branches.map(branch => 
+                                    '<option value="' + branch.name + '" ' + 
+                                    (branch.name === currentBranch ? 'selected' : '') + '>' +
+                                    branch.name +
+                                    '</option>'
+                                ).join('');
+                            }
+                        }
+
+                        // Add repository and branch change handlers
+                        document.getElementById('repoSelect')?.addEventListener('change', function(e) {
+                            vscode.postMessage({
+                                command: 'switchRepository',
+                                path: e.target.value
+                            });
+                        });
+
+                        document.getElementById('branchSelect')?.addEventListener('change', function(e) {
+                            vscode.postMessage({
+                                command: 'switchBranch',
+                                branch: e.target.value
+                            });
+                        });
                     </script>
                 </body>
             </html>
@@ -790,19 +917,35 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 webview.postMessage({ 
                     type: 'gitChanges', 
                     changes: [], 
+                    repositories: [],
+                    branches: [],
+                    currentRepo: '',
+                    currentBranch: '',
                     hasStagedChanges: false,
                     hasUnstagedChanges: false,
                     hasUnpushedCommits: false
                 });
-                webview.postMessage({ 
-                    type: 'error', 
-                    message: 'No Git repository found'
-                });
                 return;
             }
 
-            const repo = git.repositories[0];
+            // Get all repositories
+            const repositories = git.repositories.map((r: any) => ({
+                name: r.rootUri.path.split('/').pop() || r.rootUri.path,
+                path: r.rootUri.path
+            }));
+
+            // Find the current repository based on the selected path
+            const currentRepoPath = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+            const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
+            const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
+
+            // Rest of the code remains the same...
+            const branches = state.refs.filter((ref: any) => ref.type === 1).map((branch: any) => ({
+                name: branch.name || '',
+                remote: branch.remote || false,
+                upstream: branch.upstream?.name || ''
+            }));
             
             const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
@@ -816,15 +959,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 staged: true
             }));
 
-            // Check for unpushed commits
             const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
 
             const allChanges = [...workingChanges, ...stagedChanges];
             
-            // Send changes to webview
             webview.postMessage({ 
                 type: 'gitChanges', 
                 changes: allChanges,
+                repositories: repositories,
+                branches: branches,
+                currentRepo: repo.rootUri.path,
+                currentBranch: state.HEAD?.name || '',
                 hasStagedChanges: stagedChanges.length > 0,
                 hasUnstagedChanges: workingChanges.length > 0,
                 hasUnpushedCommits: hasUnpushedCommits
