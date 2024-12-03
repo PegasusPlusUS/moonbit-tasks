@@ -142,8 +142,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             
                             try {
                                 await repo.checkout(data.branch);
-                                // Save the selected branch
-                                await this.saveCurrentBranch(data);
                                 await this.getGitChanges(webviewView.webview);
                             } catch (error: any) {
                                 webviewView.webview.postMessage({
@@ -185,32 +183,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         return path;
-    }
-
-    private currentBranch: string = '';
-
-    private async saveCurrentBranch(data: any) {
-        try {
-            await vscode.workspace.getConfiguration().update('moonbit-tasks.currentBranch', data.branch, true);
-        } catch (error: any) {
-            console.error('Failed to save current branch:', error);
-            this.currentBranch = data.Branch;
-        }
-    }
-
-    private async getCurrentBranch() {
-        let branch : string | undefined = undefined;
-        try {
-            branch = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentBranch');
-        } catch (error: any) {
-            console.error('Failed to get current branch:', error);
-        }
-
-        if (branch === undefined) {
-            branch = this.currentBranch;
-        }
-
-        return branch;
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
