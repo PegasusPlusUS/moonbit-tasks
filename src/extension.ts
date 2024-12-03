@@ -290,7 +290,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             <!-- Git Actions -->
                             <div class="button-container" style="padding: 8px;">
-                                <button class="button" onclick="gitPull()">Pull </button>
+                                <button class="button" onclick="gitPull()"> Pull </button>
                                 <button class="button" onclick="gitFetch()">Fetch</button>
                             </div>
                             
@@ -311,7 +311,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
                                 <div class="button-container">
                                     <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled> Push </button>
+                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled>  Push  </button>
                                 </div>
                             </div>
                         </div>
