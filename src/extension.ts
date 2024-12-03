@@ -171,12 +171,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async getCurrentRepositoryPath() {
+        let path : string | undefined = undefined;
         try {
-            return await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+            path = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
         } catch (error: any) {
             console.error('Failed to get current repository path:', error);
-            return this.currentRepositoryPath;
         }
+        
+        if (path === undefined) {
+            path = this.currentRepositoryPath;
+        }
+
+        return path;
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
