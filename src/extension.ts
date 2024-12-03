@@ -98,6 +98,16 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     // Execute the command when tree item is selected
                     vscode.commands.executeCommand('moonbit-tasks.treeItemSelected', data.itemId);
                     break;
+                case 'unstage':
+                    if (data.files) {
+                        await this.gitUnstage(data.files, webviewView.webview);
+                    }
+                    break;
+                case 'discard':
+                    if (data.files) {
+                        await this.gitDiscard(data.files, webviewView.webview);
+                    }
+                    break;
             }
         });
 
@@ -110,153 +120,147 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Smart Tasks</title>
                     <style>
-                        body { 
-                            padding: 10px; 
-                            box-sizing: border-box;
+                        /* General layout styles */
+                        .panel-container {
+                            display: flex;
+                            flex-direction: column;
+                            height: 100vh;
+                            gap: 16px;
                         }
-                        * {
-                            box-sizing: border-box;
-                        }
-                        .button-container { 
-                            display: flex; 
-                            gap: 5px; 
-                            margin: 10px 0;
-                            flex-wrap: wrap; /* Allow buttons to wrap on narrow panels */
-                        }
-                        .button { 
-                            padding: 4px 8px;
-                            background: var(--vscode-button-background);
-                            color: var(--vscode-button-foreground);
-                            border: none;
-                            border-radius: 2px;
-                            cursor: pointer;
-                            flex-grow: 1; /* Allow buttons to grow */
-                            min-width: 60px; /* Minimum button width */
-                        }
-                        .button:hover { background: var(--vscode-button-hoverBackground); }
-                        #commitMessage {
-                            width: 100%;
-                            margin: 10px 0;
-                            padding: 5px;
-                            background: var(--vscode-input-background);
-                            color: var(--vscode-input-foreground);
-                            border: 1px solid var(--vscode-input-border);
-                            resize: vertical; /* Only allow vertical resizing */
-                            min-height: 50px;
-                            max-height: 200px;
-                        }
-                        .file-tree {
-                            margin: 10px 0;
-                            max-height: 200px;
+
+                        .git-panel, .tree-panel {
+                            flex: 1;
                             overflow-y: auto;
-                            width: 100%;
+                            border: 1px solid var(--vscode-panel-border);
+                            border-radius: 4px;
+                            margin: 8px;
                         }
+
+                        .section-header {
+                            padding: 4px 12px;
+                            font-weight: bold;
+                            color: var(--vscode-foreground);
+                            background: var(--vscode-sideBar-background);
+                            position: sticky;
+                            top: 0;
+                            z-index: 1;
+                        }
+
+                        .file-tree {
+                            margin: 0;
+                            padding: 0;
+                        }
+
                         .file-item {
                             display: flex;
                             align-items: center;
-                            padding: 2px 0;
-                            width: 100%;
-                            overflow-x: hidden;
-                        }
-                        .file-item input[type="checkbox"] {
-                            margin-right: 5px;
-                            flex-shrink: 0;
-                        }
-                        .file-item span {
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                            white-space: nowrap;
-                        }
-                        
-                        #statusArea {
-                            margin: 10px 0;
-                            padding: 8px;
-                            border-radius: 3px;
-                            display: none;  /* Hidden by default */
+                            padding: 4px 12px;
+                            position: relative;
+                            cursor: default;
+                            user-select: none;
                         }
 
-                        #statusArea.error {
-                            display: block;
-                            background: var(--vscode-inputValidation-errorBackground);
-                            border: 1px solid var(--vscode-inputValidation-errorBorder);
-                            color: var(--vscode-inputValidation-errorForeground);
-                        }
-
-                        #statusArea.info {
-                            display: block;
-                            background: var(--vscode-inputValidation-infoBackground);
-                            border: 1px solid var(--vscode-inputValidation-infoBorder);
-                            color: var(--vscode-inputValidation-infoForeground);
-                        }
-                        .button:disabled {
-                            opacity: 0.5;
-                            cursor: not-allowed;
-                            background: var(--vscode-button-secondaryBackground);
-                        }
-
-                        .tree-view {
-                            margin-top: 10px;
-                            border: 1px solid var(--vscode-input-border);
-                            border-radius: 3px;
-                            max-height: 200px;
-                            overflow-y: auto;
-                        }
-
-                        .tree-item {
-                            padding: 4px 8px;
-                            display: flex;
-                            align-items: center;
-                            cursor: pointer;
-                        }
-
-                        .tree-item:hover {
+                        .file-item:hover {
                             background: var(--vscode-list-hoverBackground);
                         }
 
-                        .tree-item.selected {
-                            background: var(--vscode-list-activeSelectionBackground);
-                            color: var(--vscode-list-activeSelectionForeground);
-                        }
-
-                        .tree-item-icon {
-                            margin-right: 5px;
-                            width: 16px;
-                            height: 16px;
-                        }
-
-                        .tree-item-label {
+                        .file-name {
                             flex-grow: 1;
-                            white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+
+                        .file-actions {
+                            display: none;
+                            position: absolute;
+                            right: 8px;
+                            top: 50%;
+                            transform: translateY(-50%);
+                        }
+
+                        .file-item:hover .file-actions {
+                            display: flex;
+                            gap: 4px;
+                        }
+
+                        .action-button {
+                            padding: 2px 4px;
+                            background: transparent;
+                            border: none;
+                            color: var(--vscode-foreground);
+                            cursor: pointer;
+                            font-size: 12px;
+                            opacity: 0.8;
+                        }
+
+                        .action-button:hover {
+                            opacity: 1;
+                            background: var(--vscode-button-background);
+                        }
+
+                        .tooltip {
+                            position: absolute;
+                            background: var(--vscode-editor-background);
+                            border: 1px solid var(--vscode-widget-border);
+                            padding: 4px 8px;
+                            border-radius: 2px;
+                            font-size: 12px;
+                            z-index: 1000;
+                            display: none;
+                            white-space: nowrap;
+                            top: 100%;
+                            left: 0;
+                        }
+
+                        .file-item:hover .tooltip {
+                            display: block;
                         }
                     </style>
                 </head>
                 <body>
-                    <div id="statusArea"></div>
+                    <div class="panel-container">
+                        <!-- Git Source Control Panel -->
+                        <div class="git-panel">
+                            <div class="section-header">Source Control</div>
+                            
+                            <!-- Changes section -->
+                            <div class="section-header" style="font-size: 0.9em;">Changes</div>
+                            <div id="changesTree" class="file-tree">
+                                <!-- Changed files will be populated here -->
+                            </div>
 
-                    <div class="button-container">
-                        <button class="button" onclick="gitPull()">Pull</button>
-                        <button class="button" onclick="gitFetch()">Fetch</button>
-                    </div>
-                    
-                    <textarea id="commitMessage" placeholder="Enter commit message..." rows="2"></textarea>
-                    
-                    <div id="fileTree" class="file-tree">
-                        <!-- Git changes will be populated here -->
-                    </div>
+                            <!-- Staged section -->
+                            <div class="section-header" style="font-size: 0.9em;">Staged Changes</div>
+                            <div id="stagedTree" class="file-tree">
+                                <!-- Staged files will be populated here -->
+                            </div>
 
-                    <div class="button-container">
-                        <button class="button" id="stageBtn" onclick="gitStage()" disabled>Stage</button>
-                        <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                        <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
-                    </div>
+                            <!-- Commit Area -->
+                            <div class="commit-area">
+                                <textarea id="commitMessage" placeholder="Enter commit message..." rows="2"></textarea>
+                                <div class="button-container">
+                                    <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
+                                    <button class="button" id="commitAndPushBtn" onclick="gitCommitAndPush()" disabled>Commit & Push</button>
+                                </div>
+                            </div>
 
-                    <div id="treeView" class="tree-view"></div>
+                            <!-- Git Actions -->
+                            <div class="button-container" style="padding: 8px;">
+                                <button class="button" onclick="gitPull()">Pull</button>
+                                <button class="button" onclick="gitFetch()">Fetch</button>
+                            </div>
+                        </div>
+
+                        <!-- Tree View Panel -->
+                        <div class="tree-panel">
+                            <div class="section-header">Smart Tasks</div>
+                            <div id="treeView" class="tree-view">
+                                <!-- Tree items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
 
                     <script>
                         const vscode = acquireVsCodeApi();
@@ -320,31 +324,61 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             commitAndPushBtn.disabled = !hasStagedChanges;
                         }
 
-                        function updateFileTree(changes) {
-                            const fileTree = document.getElementById('fileTree');
-                            fileTree.innerHTML = changes.map(file => \`
-                                <div class="file-item">
-                                    <input type="checkbox" data-file="\${file.path}" \${file.staged ? 'checked disabled' : ''}>
-                                    <span>\${file.path} (\${file.staged ? 'Staged' : file.status})</span>
-                                </div>
-                            \`).join('');
-
-                            // After updating the file tree, check if we need to update button states
-                            const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
-                            const hasUnstagedChanges = document.querySelectorAll('.file-item input[type="checkbox"]:not([disabled])').length > 0;
-                            const stageBtn = document.getElementById('stageBtn');
-                            stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
+                        function getFileName(fullpath) {
+                            return fullpath.split(/[\\\\/]/).pop();
                         }
 
-                        // Add listener for checkbox changes
-                        document.addEventListener('change', event => {
-                            if (event.target.type === 'checkbox') {
-                                const checkedFiles = document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])');
-                                const hasUnstagedChanges = document.querySelectorAll('.file-item input[type="checkbox"]:not([disabled])').length > 0;
-                                const stageBtn = document.getElementById('stageBtn');
-                                stageBtn.disabled = !hasUnstagedChanges || checkedFiles.length === 0;
+                        function updateFileTree(changes) {
+                            const changesTree = document.getElementById('changesTree');
+                            const stagedTree = document.getElementById('stagedTree');
+                            
+                            // Separate changes into staged and unstaged
+                            const unstagedChanges = changes.filter(file => !file.staged);
+                            const stagedChanges = changes.filter(file => file.staged);
+
+                            // Render unstaged changes
+                            changesTree.innerHTML = unstagedChanges.map(file => {
+                                const fileName = getFileName(file.path);
+                                return \`
+                                    <div class="file-item" data-file="\${file.path}">
+                                        <span class="file-name">\${fileName}</span>
+                                        <div class="tooltip">\${file.path}</div>
+                                        <div class="file-actions">
+                                            <button class="action-button" onclick="stageFile('\${file.path}')" title="Stage Changes">+</button>
+                                            <button class="action-button" onclick="discardFile('\${file.path}')" title="Discard Changes">⨯</button>
+                                        </div>
+                                    </div>
+                                \`;
+                            }).join('');
+
+                            // Render staged changes
+                            stagedTree.innerHTML = stagedChanges.map(file => {
+                                const fileName = file.path.split(/[\\\\/]/).pop(); // Handle both forward and backslashes
+                                return \`
+                                    <div class="file-item" data-file="\${file.path}">
+                                        <span class="file-name">\${fileName}</span>
+                                        <div class="tooltip">\${file.path}</div>
+                                        <div class="file-actions">
+                                            <button class="action-button" onclick="unstageFile('\${file.path}')" title="Unstage Changes">-</button>
+                                        </div>
+                                    </div>
+                                \`;
+                            }).join('');
+
+                            // Update commit button states
+                            const commitBtn = document.getElementById('commitBtn');
+                            const commitAndPushBtn = document.getElementById('commitAndPushBtn');
+                            if (commitBtn && commitAndPushBtn) {
+                                const hasStagedChanges = stagedChanges.length > 0;
+                                commitBtn.disabled = !hasStagedChanges;
+                                commitAndPushBtn.disabled = !hasStagedChanges;
                             }
-                        });
+                        }
+
+                        // Add auto-refresh for changes (every 5 seconds)
+                        setInterval(() => {
+                            vscode.postMessage({ command: 'getChanges' });
+                        }, 5000);
 
                         function gitStage() {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
@@ -425,6 +459,29 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 // ... existing cases ...
                             }
                         });
+
+                        function stageFile(filePath) {
+                            vscode.postMessage({ 
+                                command: 'stage',
+                                files: [filePath]
+                            });
+                        }
+
+                        function unstageFile(filePath) {
+                            vscode.postMessage({ 
+                                command: 'unstage',
+                                files: [filePath]
+                            });
+                        }
+
+                        function discardFile(filePath) {
+                            if (confirm('Are you sure you want to discard changes in this file?')) {
+                                vscode.postMessage({ 
+                                    command: 'discard',
+                                    files: [filePath]
+                                });
+                            }
+                        }
                     </script>
                 </body>
             </html>
@@ -488,20 +545,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 await repo.add(files);
                 webview.postMessage({ 
                     type: 'info', 
-                    message: 'Files staged successfully'
+                    message: 'Changes staged successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
                 webview.postMessage({ 
                     type: 'error', 
-                    message: 'Failed to stage files: ' + (error.message || 'Unknown error')
+                    message: 'Failed to stage changes: ' + (error.message || 'Unknown error')
                 });
             }
-        } else {
-            webview.postMessage({ 
-                type: 'error', 
-                message: 'No Git repository found'
-            });
         }
     }
 
@@ -663,5 +715,44 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             items: items
         });
     }
-}
 
+    private async gitUnstage(files: string[], webview: vscode.Webview) {
+        const git = await this.getGitAPI(webview);
+        if (git && git.repositories.length > 0) {
+            const repo = git.repositories[0];
+            try {
+                await repo.revert(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes unstaged successfully'
+                });
+                await this.getGitChanges(webview); // Refresh status
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to unstage changes: ' + (error.message || 'Unknown error')
+                });
+            }
+        }
+    }
+
+    private async gitDiscard(files: string[], webview: vscode.Webview) {
+        const git = await this.getGitAPI(webview);
+        if (git && git.repositories.length > 0) {
+            const repo = git.repositories[0];
+            try {
+                await repo.clean(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes discarded successfully'
+                });
+                await this.getGitChanges(webview); // Refresh status
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
+                });
+            }
+        }
+    }
+}
