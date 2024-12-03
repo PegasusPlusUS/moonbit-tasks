@@ -125,7 +125,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         const newRepo = git?.repositories.find((r: any) => r.rootUri.path === data.path);
                         if (newRepo) {
                             // Save the selected repository path
-                            await vscode.workspace.getConfiguration().update('moonbit-tasks.currentRepository', data.path, true);
+                            await this.saveCurrentRepositoryPath(data);
                             // Switch to the selected repository
                             await this.getGitChanges(webviewView.webview);
                         }
@@ -157,6 +157,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
         this.updateTreeView(webviewView.webview, []);
         webviewView.webview.html = this._getHtmlContent(webviewView.webview);
+    }
+
+    private currentRepositoryPath: string = '';
+
+    private async saveCurrentRepositoryPath(data: any) {
+        try {
+            await vscode.workspace.getConfiguration().update('moonbit-tasks.currentRepository', data.path, true);
+        } catch (error: any) {
+            console.error('Failed to save current repository path:', error);
+            this.currentRepositoryPath = data.path;
+        }
+    }
+
+    private async getCurrentRepositoryPath() {
+        try {
+            return await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+        } catch (error: any) {
+            console.error('Failed to get current repository path:', error);
+            return this.currentRepositoryPath;
+        }
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
@@ -935,7 +955,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }));
 
             // Find the current repository based on the selected path
-            const currentRepoPath = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
+            const currentRepoPath = this.getCurrentRepositoryPath();
             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
