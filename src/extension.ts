@@ -177,7 +177,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         } catch (error: any) {
             console.error('Failed to get current repository path:', error);
         }
-        
+
         if (path === undefined) {
             path = this.currentRepositoryPath;
         }
@@ -961,7 +961,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }));
 
             // Find the current repository based on the selected path
-            const currentRepoPath = this.getCurrentRepositoryPath();
+            const currentRepoPath = await this.getCurrentRepositoryPath();
             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
