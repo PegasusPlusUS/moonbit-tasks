@@ -243,7 +243,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .button-container {
                             display: flex;
                             gap: 8px;
-                            margin-top: 8px;
+                            margin: 8px;
+                            justify-content: space-between;
                         }
 
                         .button {
@@ -254,6 +255,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             border-radius: 2px;
                             cursor: pointer;
                             font-size: 12px;
+                            min-width: 80px;  /* Set minimum width for all buttons */
+                            text-align: center;
+                            flex: 1;         /* Make all buttons take equal space */
+                            max-width: 100px; /* Set maximum width to prevent too wide buttons */
                         }
 
                         .button:hover {
@@ -289,8 +294,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <div class="section-header">Git</div>
 
                             <!-- Git Actions -->
-                            <div class="button-container" style="padding: 8px;">
-                                <button class="button" onclick="gitPull()"> Pull </button>
+                            <div class="button-container">
+                                <button class="button" onclick="gitPull()">Pull</button>
                                 <button class="button" onclick="gitFetch()">Fetch</button>
                             </div>
                             
@@ -311,7 +316,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
                                 <div class="button-container">
                                     <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled>  Push  </button>
+                                    <button class="button" id="pushBtn" onclick="gitPush()" disabled>Push</button>
                                 </div>
                             </div>
                         </div>
