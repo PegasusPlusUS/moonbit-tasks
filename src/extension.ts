@@ -87,9 +87,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 case 'push':
-                    if (data.message) {
-                        await this.gitPush(data.message, webviewView.webview);
-                    }
+                    await this.gitPush(webviewView.webview);
                     break;
                 case 'getChanges':
                     await this.getGitChanges(webviewView.webview);
@@ -510,14 +508,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function gitPush() {
-                            const message = document.getElementById('commitMessage').value;
-                            if (message.trim()) {
-                                vscode.postMessage({
-                                    command: 'push',
-                                    message: message
-                                });
-                                document.getElementById('commitMessage').value = ''; // Clear message after commit
-                            }
+                            vscode.postMessage({
+                                command: 'push',
+                                message: ''
+                            });
                         }
 
                         function getGitChanges() {
@@ -734,7 +728,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async gitPush(message: string, webview: vscode.Webview) {
+    private async gitPush(webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
