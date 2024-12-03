@@ -241,13 +241,54 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             border: 1px solid var(--vscode-inputValidation-infoBorder);
                             color: var(--vscode-inputValidation-infoForeground);
                         }
+
+                        .button-container {
+                            display: flex;
+                            gap: 8px;
+                            margin-top: 8px;
+                        }
+
+                        .button {
+                            background-color: var(--vscode-button-background, #0E639C);
+                            color: var(--vscode-button-foreground, #ffffff);
+                            border: none;
+                            padding: 4px 12px;
+                            border-radius: 2px;
+                            cursor: pointer;
+                            font-size: 12px;
+                        }
+
+                        .button:hover {
+                            background-color: var(--vscode-button-hoverBackground, #1177bb);
+                        }
+
+                        .button:disabled {
+                            opacity: 0.5;
+                            cursor: not-allowed;
+                        }
+
+                        /* Keep the action buttons (+ - ×) styling separate */
+                        .action-button {
+                            padding: 2px 4px;
+                            background: transparent;
+                            border: none;
+                            color: var(--vscode-foreground);
+                            cursor: pointer;
+                            font-size: 12px;
+                            opacity: 0.8;
+                        }
+
+                        .action-button:hover {
+                            opacity: 1;
+                            background: var(--vscode-button-background);
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="panel-container">
                         <!-- Git Source Control Panel -->
                         <div class="git-panel">
-                            <div class="section-header">Source Control</div>
+                            <div class="section-header">Git</div>
                             
                             <!-- Changes section -->
                             <div class="section-header" style="font-size: 0.9em;">Changes</div>
@@ -279,7 +320,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         <!-- Tree View Panel -->
                         <div class="tree-panel">
-                            <div class="section-header">Smart Tasks</div>
+                            <div class="section-header">Project Tasks</div>
                             <div id="treeView" class="tree-view">
                                 <!-- Tree items will be populated here -->
                             </div>
