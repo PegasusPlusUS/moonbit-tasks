@@ -62,13 +62,7 @@
           "retainContextWhenHidden": true
         }
       ]
-    },
-    "commands": [
-      {
-        "command": "moonbit-tasks.onSmartTasksViewItemClick",
-        "title": "On Smart Tasks View Item Click"
-      }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

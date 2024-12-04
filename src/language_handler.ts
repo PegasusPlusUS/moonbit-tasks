@@ -12,26 +12,12 @@ export const extension_name = "moonbit-tasks";
 export function active(context: vscode.ExtensionContext) {
 	langDef.activate(context);
 
-	registerClickHandler(context);
-
 	registerActiveDocumentTracker(context);
     activeDocumentChanges(vscode.window.activeTextEditor);
 }
 
 export function deactivate() {
 	langDef.deactivate();
-}
-
-function registerClickHandler(context: vscode.ExtensionContext) {
-    const clickSmartTasksHandler = vscode.commands.registerCommand(extension_name + onSmartTasksViewItemClickEventName, async (item: string) => {
-        try {
-            await smartTaskRun(`${item}`);
-        } catch(err) {
-            vscode.window.showInformationMessage(`Run task error: ${err}`);
-        }
-    });
-
-    context.subscriptions.push(clickSmartTasksHandler);
 }
 
 function registerActiveDocumentTracker(context: vscode.ExtensionContext) {
@@ -44,13 +30,13 @@ function registerActiveDocumentTracker(context: vscode.ExtensionContext) {
 export const myGitTasksCustomViewID = 'myGitTasksCustomView';
 
 export let smartTasksRootTitle = "No active document";
-export let smartCommands:string[] = [];
-
+export let smartCommandEntries:Array<[command:string, shellcmd:string]> = [];
+export let smartTasksDir:string = "";
 export async function refereshSmartTasksDataProvider(documentDir: string) {
     smartTasksRootTitle = "Detecting " + documentDir;
-    smartCommands = [];
+    smartCommandEntries = [];
 
-    vscode.commands.executeCommand('moonbit-tasks.updateTreeView', []);
+    vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
     
     let result = await detectProjectForActiveDocument();
 
@@ -59,11 +45,10 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
     } else if (undefined == result.handler.commands) {
         smartTasksRootTitle = "No commands found in signature";
     } else {
-        smartCommands = Array.from(result.handler.commands.keys());
+        smartCommandEntries = Array.from(result.handler.commands.entries());//.map(([command, shellcmd]) => ({command, shellcmd})));
+        smartTasksDir = documentDir;
     }
 
-    vscode.commands.executeCommand('moonbit-tasks.updateTreeView', []);
+    vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
 }
-
-export const onSmartTasksViewItemClickEventName = '.onSmartTasksViewItemClick';
 

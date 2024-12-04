@@ -4,7 +4,7 @@ import { access as fsAccess, constants as fsConstants, promises as fsPromises } 
 
 import * as helper from './helper';
 import * as langDef from './language_def';
-import { refereshSmartTasksDataProvider } from "./language_handler";
+import { refereshSmartTasksDataProvider, smartTasksDir } from "./language_handler";
 import os from "os";
 
 let myTerminal: vscode.Terminal | undefined;
@@ -114,20 +114,8 @@ export async function detectProjectForActiveDocument() {
 
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task
 export async function smartTaskRun(cmd: string) {
-	let result = await detectProjectForActiveDocument();
-
-	if (result) {
-		if (helper.isValidString(result.projectDir) && langDef.handlerInfo.isValid(result.handler)) {
-			//vscode.window.showInformationMessage(`Running ${handler?.projectManagerCmd} in: ${projectDir}`);
-
-			// Example shell command to be executed in the current file's directory
-			const shellCommand = result.handler?.commands.get(cmd);
-
-			// Run the shell command in the file's directory
-			runCmdInTerminal(shellCommand, result.projectDir);
-		} else {
-			//vscode.window.showWarningMessage(`Can't find any project signature file.`);
-		}
+	if (helper.isValidString(smartTasksDir)) {
+		runCmdInTerminal(cmd, smartTasksDir);
 	}
 }
 

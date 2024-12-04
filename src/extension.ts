@@ -35,9 +35,9 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     const gitTasksProvider = new TasksWebviewProvider(context.extensionUri);
     // Register the command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.updateTreeView', (items: Array<{ id: string, label: string, icon?: string }>) => {
+        vscode.commands.registerCommand('moonbit-tasks.updateSmartTasksTreeView', (items: Array<{ id: string, label: string, icon?: string }>) => {
             if (gitTasksProvider._webview) {
-                gitTasksProvider.updateTreeView(gitTasksProvider._webview, items);
+                gitTasksProvider.updateSmartTasksTreeView(gitTasksProvider._webview, items);
             }
         })
     );
@@ -46,8 +46,8 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
     // Register the tree item selected command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.treeItemSelected', async(itemId: string) => {
-            await smartTaskExt.smartTaskRun(itemId);
+        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async(shellcmd: any) => {
+            await smartTaskExt.smartTaskRun(shellcmd);
         })
     );
 }
@@ -105,9 +105,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 case 'getChanges':
                     await this.getGitChanges(webviewView.webview);
                     break;
-                case 'treeItemSelected':
+                case 'smartTasksTreeItemSelected':
                     // Execute the command when tree item is selected
-                    vscode.commands.executeCommand('moonbit-tasks.treeItemSelected', data.itemId);
+                    vscode.commands.executeCommand('moonbit-tasks.smartTasksTreeItemSelected', data.itemId);
                     break;
                 case 'unstage':
                     if (data.files) {
@@ -155,8 +155,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        this.updateTreeView(webviewView.webview, []);
         webviewView.webview.html = this._getHtmlContent(webviewView.webview);
+        
+        this.updateSmartTasksTreeView(webviewView.webview, []);
+        // Initialize by getting changes
+        this.getGitChanges(webviewView.webview);
     }
 
     private currentRepositoryPath: string = '';
@@ -167,6 +170,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         } catch (error: any) {
             console.error('Failed to save current repository path:', error);
             this.currentRepositoryPath = data.path;
+        }
+
+        if (mbTaskExt.smartCommandEntries.length == 0) {
+            mbTaskExt.refereshSmartTasksDataProvider(data.path);
         }
     }
 
@@ -453,16 +460,16 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             </div>
                         </div>
 
+                        <div id="statusMessage" class="status-message"></div>
+
                         <!-- Project Smart Tasks Tree View Panel -->
                         <div class="smart-tasks-panel">
                             <div class="section-header">Project Tasks</div>
-                            <div id="treeView" class="tree-view">
-                                <!-- Tree items will be populated here -->
+                            <div id="smartTasksTreeView" class="tree-view">
+                                <!-- Smart Tasks tree items will be populated here -->
                             </div>
                         </div>
                     </div>
-
-                    <div id="statusMessage" class="status-message"></div>
 
                     <script>
                         const vscode = acquireVsCodeApi();
@@ -503,6 +510,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         window.addEventListener('message', event => {
                             const message = event.data;
                             switch (message.type) {
+                                case 'updateSmartTasksTree':
+                                    updateSmartTasksTreeView(message.items);
+                                    break;
                                 case 'gitChanges':
                                     updateFileTree(message.changes);
                                     updateButtonStates(
@@ -623,10 +633,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }).join('');
                         }
 
-                        // Add auto-refresh for changes (every 5 seconds)
-                        setInterval(() => {
-                            vscode.postMessage({ command: 'getChanges' });
-                        }, 5000);
+                        // Move the interval setup outside of any function
+                        // and make sure it runs when the page loads
+                        (function setupAutoRefresh() {
+                            console.log('Setting up auto-refresh interval');
+                            setInterval(() => {
+                                console.log('Auto-refresh: Getting changes');
+                                vscode.postMessage({ command: 'getChanges' });
+                            }, 5000);
+                        })();
 
                         function gitStage() {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
@@ -661,8 +676,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'getChanges' });
                         }
 
-                        function updateTreeView(items) {
-                            const treeView = document.getElementById('treeView');
+                        function updateSmartTasksTreeView(items) {
+                            const treeView = document.getElementById('smartTasksTreeView');
                             if (!items || !Array.isArray(items)) {
                                 treeView.innerHTML = '';
                                 return;
@@ -670,7 +685,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             
                             const itemsHtml = items.map(function(item) {
                                 return \`
-                                    <div class="tree-item" data-id="\${item.id}" onclick="selectTreeItem(this)">
+                                    <div class="tree-item" data-id="\${item.id}" onclick="selectSmartTasksTreeItem(this)">
                                         <span class="tree-item-icon">\${item.icon || ''}</span>
                                         <span class="tree-item-label">\${item.label}</span>
                                     </div>
@@ -680,7 +695,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             treeView.innerHTML = itemsHtml;
                         }
 
-                        function selectTreeItem(element) {
+                        function selectSmartTasksTreeItem(element) {
                             document.querySelectorAll('.tree-item.selected').forEach(item => {
                                 item.classList.remove('selected');
                             });
@@ -688,21 +703,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             element.classList.add('selected');
                             
                             vscode.postMessage({
-                                command: 'treeItemSelected',
+                                command: 'smartTasksTreeItemSelected',
                                 itemId: element.dataset.id
                             });
                         }
-
-                        // Update message handler to handle tree data
-                        window.addEventListener('message', event => {
-                            const message = event.data;
-                            switch (message.type) {
-                                case 'updateTree':
-                                    updateTreeView(message.items);
-                                    break;
-                                // ... existing cases ...
-                            }
-                        });
 
                         function stageFile(filePath) {
                             vscode.postMessage({ 
@@ -1053,21 +1057,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    public updateTreeView(webview: vscode.Webview, items: Array<{ id: string, label: string, icon?: string }>) {
-        if (mbTaskExt.smartCommands.length == 0) {
-            items = [
+    public updateSmartTasksTreeView(webview: vscode.Webview, items: Array<{ id: string, label: string, icon?: string }>) {
+        let treeItems;
+        if (mbTaskExt.smartCommandEntries.length == 0) {
+            treeItems = [
                 { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: '🔍' },
             ];
         } else {
-            items = mbTaskExt.smartCommands.map(str => ({ id: str, label: str, icon: '⚙️'}));
+            treeItems = mbTaskExt.smartCommandEntries.map(entry=> ({ id: entry[1], label: entry[0], icon: '⚙️'}));
         }
+        // items = [
         //     { id: '1', label: 'Build ', icon: '📁' },
         //     { id: '2', label: 'Test ', icon: '🔧' },
         //     { id: '3', label: 'Package', icon: '📄' }
-    
+        // ];
         webview.postMessage({
-            type: 'updateTree',
-            items: items
+            type: 'updateSmartTasksTree',
+            items: treeItems
         });
     }
 }
