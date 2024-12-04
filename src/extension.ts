@@ -196,15 +196,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             display: flex;
                             flex-direction: column;
                             height: 100vh;
-                            gap: 16px;
+                            gap: 12px;
                         }
 
-                        .git-panel, .tree-panel {
+                        .git-panel, .smart-tasks-panel {
                             flex: 1;
                             overflow-y: auto;
                             border: 1px solid var(--vscode-panel-border);
                             border-radius: 4px;
-                            margin: 8px;
+                            margin: 4px;
                         }
 
                         .section-header {
@@ -453,8 +453,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             </div>
                         </div>
 
-                        <!-- Tree View Panel -->
-                        <div class="tree-panel">
+                        <!-- Project Smart Tasks Tree View Panel -->
+                        <div class="smart-tasks-panel">
                             <div class="section-header">Project Tasks</div>
                             <div id="treeView" class="tree-view">
                                 <!-- Tree items will be populated here -->
@@ -1015,12 +1015,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 hasUnpushedCommits: hasUnpushedCommits
             });
             
-            if (allChanges.length === 0) {
-                webview.postMessage({ 
-                    type: 'info', 
-                    message: 'No changes detected'
-                });
-            }
+            // if (allChanges.length === 0) {
+            //     webview.postMessage({ 
+            //         type: 'info', 
+            //         message: 'No changes detected'
+            //     });
+            // }
         } catch (error: any) {
             console.error('Error in getGitChanges:', error);
             webview.postMessage({ 

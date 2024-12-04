@@ -231,7 +231,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 - Git button and commit message state
 
-### 0.12.2024120303
+### 0.12.2024120304
 
 - Git branch switch
 
