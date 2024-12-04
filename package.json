@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120305",
+  "version": "0.12.2024120306",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -60,6 +60,52 @@
           "name": "Smart Tasks",
           "type": "webview",
           "retainContextWhenHidden": true
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "moonbit-tasks.fetch",
+        "title": "Fetch",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "moonbit-tasks.pull",
+        "title": "Pull",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "moonbit-tasks.commit",
+        "title": "Commit",
+        "icon": "$(check)"
+      },
+      {
+        "command": "moonbit-tasks.push",
+        "title": "Push",
+        "icon": "$(cloud-upload)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "moonbit-tasks.fetch",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "moonbit-tasks.pull",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "moonbit-tasks.commit",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "moonbit-tasks.push",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@2"
         }
       ]
     }

@@ -33,11 +33,46 @@ export function deactivate() {
 function registerGitTasksWebview(context: vscode.ExtensionContext) {
     // Register Smart Tasks Webview
     const gitTasksProvider = new TasksWebviewProvider(context.extensionUri);
+
+    // Register the commands for the title bar buttons
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.commit', async () => {
+            if (gitTasksProvider._webview) {
+                // Post a message to webview to get the commit message
+                gitTasksProvider._webview.postMessage({ type: 'getCommitMessage' });
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.push', async () => {
+            if (gitTasksProvider._webview) {
+                await gitTasksProvider.gitPush(gitTasksProvider._webview);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.pull', async () => {
+            if (gitTasksProvider._webview) {
+                await gitTasksProvider.gitPull(gitTasksProvider._webview);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.fetch', async () => {
+            if (gitTasksProvider._webview) {
+                await gitTasksProvider.gitFetch(gitTasksProvider._webview);
+            }
+        })
+    );
+    
     // Register the command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.updateSmartTasksTreeView', (items: Array<{ id: string, label: string, icon?: string }>) => {
+        vscode.commands.registerCommand('moonbit-tasks.updateSmartTasksTreeView', () => {
             if (gitTasksProvider._webview) {
-                gitTasksProvider.updateSmartTasksTreeView(gitTasksProvider._webview, items);
+                gitTasksProvider.updateSmartTasksTreeView(gitTasksProvider._webview);
             }
         })
     );
@@ -157,7 +192,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
         webviewView.webview.html = this._getHtmlContent(webviewView.webview);
         
-        this.updateSmartTasksTreeView(webviewView.webview, []);
+        this.updateSmartTasksTreeView(webviewView.webview);
         // Initialize by getting changes
         this.getGitChanges(webviewView.webview);
     }
@@ -193,7 +228,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
-        return `
+        let htmlContent = `
             <!DOCTYPE html>
             <html>
                 <head>
@@ -298,7 +333,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .status-message {
                             position: fixed;
                             bottom: 20px;
-                            left: 50%;
+                            left: 40%;
                             transform: translateX(-50%);
                             padding: 8px 16px;
                             border-radius: 4px;
@@ -423,21 +458,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <div class="git-panel">
                             <div class="section-header">
                                 <div class="header-controls">
-                                    <select id="repoSelect" class="select-control" title="Select Repository">
-                                        <!-- Repositories will be populated here -->
-                                    </select>
-                                    <select id="branchSelect" class="select-control" title="Select Branch">
-                                        <!-- Branches will be populated here -->
-                                    </select>
+                                    <div class="dropdown-container">
+                                        <select id="repoSelect" class="select-control" title="Select Repository">
+                                            <!-- Repositories will be populated here -->
+                                        </select>
+                                        <select id="branchSelect" class="select-control" title="Select Branch">
+                                            <!-- Branches will be populated here -->
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Git Actions -->
-                            <div class="button-container">
-                                <button class="button" onclick="gitPull()">Pull</button>
-                                <button class="button" onclick="gitFetch()">Fetch</button>
-                            </div>
-                            
                             <!-- Changes section -->
                             <div id="changesHeader" class="section-header" style="font-size: 0.9em;">Changes</div>
                             <div id="changesTree" class="file-tree">
@@ -453,10 +484,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <!-- Commit Area -->
                             <div class="commit-area">
                                 <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
-                            </div>
-                            <div class="button-container">
-                                <button class="button" id="commitBtn" onclick="gitCommit()" disabled>Commit</button>
-                                <button class="button" id="pushBtn" onclick="gitPush()" disabled>Push</button>
                             </div>
                         </div>
 
@@ -510,6 +537,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         window.addEventListener('message', event => {
                             const message = event.data;
                             switch (message.type) {
+                                case 'getCommitMessage':
+                                    gitCommit();
+                                    break;
                                 case 'updateSmartTasksTree':
                                     updateSmartTasksTreeView(message.items);
                                     break;
@@ -662,6 +692,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     message: message
                                 });
                                 document.getElementById('commitMessage').value = ''; // Clear message after commit
+                            } else {
+                                showError('Please enter a commit message');
                             }
                         }
 
@@ -774,10 +806,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 </body>
             </html>
         `;
+        console.log('HTML content:', htmlContent);
+        return htmlContent;
     }
 
     // Git command implementations
-    private async gitPull(webview: vscode.Webview) {
+    public async gitPull(webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
@@ -801,7 +835,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async gitFetch(webview: vscode.Webview) {
+    public async gitFetch(webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
@@ -890,7 +924,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async gitCommit(message: string, webview: vscode.Webview) {
+    public async gitCommit(message: string, webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
@@ -915,7 +949,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async gitPush(webview: vscode.Webview) {
+    public async gitPush(webview: vscode.Webview) {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
@@ -970,6 +1004,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
 
+            // If there's no tasks detected, try detect git path
+            if (currentRepoPath && currentRepoPath !== '') {
+                if (mbTaskExt.smartCommandEntries.length == 0) {
+                    mbTaskExt.refereshSmartTasksDataProvider(currentRepoPath);
+                }
+            }
+
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
             console.log('Refs:', refs); // Debug log
@@ -1018,13 +1059,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 hasUnstagedChanges: workingChanges.length > 0,
                 hasUnpushedCommits: hasUnpushedCommits
             });
-            
-            // if (allChanges.length === 0) {
-            //     webview.postMessage({ 
-            //         type: 'info', 
-            //         message: 'No changes detected'
-            //     });
-            // }
         } catch (error: any) {
             console.error('Error in getGitChanges:', error);
             webview.postMessage({ 
@@ -1057,7 +1091,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    public updateSmartTasksTreeView(webview: vscode.Webview, items: Array<{ id: string, label: string, icon?: string }>) {
+    public updateSmartTasksTreeView(webview: vscode.Webview) {
         let treeItems;
         if (mbTaskExt.smartCommandEntries.length == 0) {
             treeItems = [
