@@ -442,13 +442,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             min-width: 120px;
                         }
 
-                        .select-control:hover {
-                            cursor: pointer;
+                        /* Add styles for unselected branch state */
+                        .select-control.no-branch-selected {
+                            border-color: var(--vscode-inputValidation-errorBorder);
+                            background-color: var(--vscode-inputValidation-errorBackground);
                         }
 
-                        .select-control option {
-                            background: var(--vscode-dropdown-listBackground);
-                            color: var(--vscode-dropdown-foreground);
+                        .select-control:hover {
+                            cursor: pointer;
                         }
                     </style>
                 </head>
@@ -779,12 +780,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // Update branch list
                             if (branchSelect) {
-                                branchSelect.innerHTML = branches.map(branch => 
-                                    '<option value="' + branch.name + '" ' + 
-                                    (branch.name === currentBranch ? 'selected' : '') + '>' +
-                                    branch.name +
-                                    '</option>'
-                                ).join('');
+                                // First check if current branch exists in the list
+                                const branchExists = branches.some(branch => branch.name === currentBranch);
+                                
+                                branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
+                                    branches.map(branch => 
+                                        '<option value="' + branch.name + '" ' + 
+                                        (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
+                                        branch.name +
+                                        '</option>'
+                                    ).join('');
+
+                                // Add or remove the no-branch-selected class based on selection
+                                if (!branchExists) {
+                                    branchSelect.classList.add('no-branch-selected');
+                                } else {
+                                    branchSelect.classList.remove('no-branch-selected');
+                                }
                             }
                         }
 
