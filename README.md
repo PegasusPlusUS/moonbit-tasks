@@ -237,3 +237,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 - Git repository switch
 
+### 0.12.2024120305
+
+- Smart tasks tree view update
+
