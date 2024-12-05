@@ -1012,10 +1012,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     // Git command implementations
-    public async gitPull(webview: vscode.Webview) {
+    private async getCurrentRepository(webview: vscode.Webview): Promise<any | undefined> {
         const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        if (!git) {
+            return undefined;
+        }
+
+        const currentRepoPath = await this.getCurrentRepositoryPath();
+        const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
+
+        // If there's no tasks detected, try detect git path
+        if (currentRepoPath && currentRepoPath !== '') {
+            if (mbTaskExt.smartCommandEntries.length == 0) {
+                mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath);
+            }
+        }
+
+        return git.repositories[repoIndex !== -1 ? repoIndex : 0];
+    }
+
+    public async gitPull(webview: vscode.Webview) {
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.pull();
                 webview.postMessage({ 
@@ -1037,9 +1055,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     public async gitFetch(webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.fetch();
                 webview.postMessage({ 
@@ -1061,9 +1078,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitStage(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.add(files);
                 webview.postMessage({ 
@@ -1086,9 +1102,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async gitUnstage(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.revert(files);
                 webview.postMessage({ 
@@ -1102,13 +1117,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     message: 'Failed to unstage changes: ' + (error.message || 'Unknown error')
                 });
             }
+        } else {
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
     private async gitDiscard(files: string[], webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.clean(files);
                 webview.postMessage({ 
@@ -1122,13 +1141,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
                 });
             }
+        } else {
+            webview.postMessage({ 
+                type: 'error', 
+                message: 'No Git repository found'
+            });
         }
     }
 
     public async gitCommit(message: string, webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.commit(message);
                 webview.postMessage({ 
@@ -1151,14 +1174,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     public async gitPush(webview: vscode.Webview) {
-        const git = await this.getGitAPI(webview);
-        if (git && git.repositories.length > 0) {
-            const repo = git.repositories[0];
+        const repo = await this.getCurrentRepository(webview);
+        if (repo) {
             try {
                 await repo.push();
                 webview.postMessage({ 
                     type: 'info', 
-                    message: 'Push successfully'
+                    message: 'Push successful'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
@@ -1204,13 +1226,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
-
-            // If there's no tasks detected, try detect git path
-            if (currentRepoPath && currentRepoPath !== '') {
-                if (mbTaskExt.smartCommandEntries.length == 0) {
-                    mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath);
-                }
-            }
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
