@@ -825,14 +825,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const repoSelect = document.getElementById('repoSelect');
                             const branchSelect = document.getElementById('branchSelect');
 
-                            // Update repository list
+                            // Update repository list visibility
                             if (repoSelect) {
-                                repoSelect.innerHTML = repositories.map(repo => 
-                                    '<option value="' + repo.path + '" title="' + repo.path + '" ' + 
-                                    (repo.path === currentRepo ? 'selected' : '') + '>' +
-                                    repo.name +
-                                    '</option>'
-                                ).join('');
+                                if (repositories.length <= 1) {
+                                    repoSelect.style.display = 'none';
+                                } else {
+                                    repoSelect.style.display = 'block';
+                                    repoSelect.innerHTML = repositories.map(repo => 
+                                        '<option value="' + repo.path + '" title="' + repo.path + '" ' + 
+                                        (repo.path === currentRepo ? 'selected' : '') + '>' +
+                                        repo.name +
+                                        '</option>'
+                                    ).join('');
+                                }
                             }
 
                             // Update branch list
