@@ -188,3 +188,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Visibility control for Changes/Staged/CommitMessage/RepositorySelector
 
 - Fix project path
+
+## 0.12.2024120501
+
+- Watch git root file system change

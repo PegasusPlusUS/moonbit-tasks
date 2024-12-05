@@ -64,6 +64,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('moonbit-tasks.fetch', async () => {
             if (gitTasksProvider._webview) {
                 await gitTasksProvider.gitFetch(gitTasksProvider._webview);
+                await gitTasksProvider.getGitChanges(gitTasksProvider._webview);
             }
         })
     );
@@ -179,6 +180,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             
                             try {
                                 await repo.checkout(data.branch);
+                                // To do: track git root, refresh on change
+                                if (mbTaskExt.smartCommandEntries.length == 0) {
+                                    console.log("asyncRefresh " + data.path);
+                                    mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
+                                }
                                 await this.getGitChanges(webviewView.webview);
                             } catch (error: any) {
                                 webviewView.webview.postMessage({
@@ -207,11 +213,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         } catch (error: any) {
             console.error('Failed to save current repository path:', error);
             this.currentRepositoryPath = data.path;
-        }
-
-        if (mbTaskExt.smartCommandEntries.length == 0) {
-            console.log("asyncRefresh " + data.path);
-            mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
         }
     }
 
@@ -1174,7 +1175,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async getGitChanges(webview: vscode.Webview) {
+    public async getGitChanges(webview: vscode.Webview) {
         try {
             const git = await this.getGitAPI(webview);
             if (!git?.repositories?.length) {

@@ -270,3 +270,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 - Visibility control for Changes/Staged/CommitMessage/RepositorySelector
 
 - Fix project path
+
+### 0.12.2024120501
+
+- Watch git root file system change
