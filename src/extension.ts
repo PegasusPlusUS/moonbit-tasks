@@ -259,6 +259,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             position: sticky;
                             top: 0;
                             z-index: 1;
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                        }
+
+                        .section-header .file-actions {
+                            opacity: 0;  /* Initially hidden */
+                            transition: opacity 0.2s;
+                            display: flex;
+                            gap: 4px;
+                        }
+
+                        .section-header:hover .file-actions {
+                            opacity: 1;  /* Show on hover */
                         }
 
                         .file-tree {
@@ -525,13 +539,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             </div>
 
                             <!-- Changes section -->
-                            <div id="changesHeader" class="section-header" style="font-size: 0.9em;">Changes</div>
+                            <div id="changesHeader" class="section-header">
+                                <span>Changes</span>
+                                <div class="file-actions">
+                                    <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                                    <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                                </div>
+                            </div>
                             <div id="changesTree" class="file-tree">
                                 <!-- Changed files will be populated here -->
                             </div>
 
                             <!-- Staged section -->
-                            <div id="stagedHeader" class="section-header" style="font-size: 0.9em;">Staged Changes</div>
+                            <div id="stagedHeader" class="section-header">
+                                <span>Staged Changes</span>
+                                <div class="file-actions">
+                                    <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                                </div>
+                            </div>
                             <div id="stagedTree" class="file-tree">
                                 <!-- Staged files will be populated here -->
                             </div>
@@ -551,6 +576,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <!-- Smart Tasks tree items will be populated here -->
                             </div>
                         <!-- /div -->
+                    </div>
+
+                    <div id="confirmModal" class="modal-overlay">
+                        <div class="modal">
+                            <div id="modalContent" class="modal-content">
+                                Are you sure you want to discard changes in this file?
+                            </div>
+                            <div class="modal-buttons">
+                                <button class="modal-button modal-button-secondary" onclick="closeModal()">Cancel</button>
+                                <button class="modal-button modal-button-primary" onclick="confirmModal()">Discard</button>
+                            </div>
+                        </div>
                     </div>
 
                     <script>
@@ -817,10 +854,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function discardFile(filePath) {
-                            vscode.postMessage({ 
-                                command: 'discard',
-                                files: [filePath]
-                            });
+                            console.log('Discard file called for:', filePath);
+                            showModal(
+                                () => {
+                                    console.log('Executing discard for:', filePath);
+                                    vscode.postMessage({ 
+                                        command: 'discard',
+                                        files: [filePath]
+                                    });
+                                },
+                                'Are you sure you want to discard changes in this file?'
+                            );
                         }
 
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
@@ -879,26 +923,60 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         });
 
-                        let pendingDiscardFile = null;
+                        let pendingAction = null;
 
-                        function showModal(filePath) {
-                            pendingDiscardFile = filePath;
+                        function showModal(action, message) {
+                            pendingAction = action;
+                            document.getElementById('modalContent').textContent = message;
                             document.getElementById('confirmModal').style.display = 'block';
                         }
 
                         function closeModal() {
-                            pendingDiscardFile = null;
+                            pendingAction = null;
                             document.getElementById('confirmModal').style.display = 'none';
                         }
 
                         function confirmModal() {
-                            if (pendingDiscardFile) {
-                                vscode.postMessage({ 
-                                    command: 'discard',
-                                    files: [pendingDiscardFile]
-                                });
+                            if (pendingAction) {
+                                pendingAction();
                             }
                             closeModal();
+                        }
+
+                        function stageAllFiles() {
+                            const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
+                                .map(item => item.getAttribute('data-file'));
+                            if (unstagedFiles.length > 0) {
+                                vscode.postMessage({ 
+                                    command: 'stage',
+                                    files: unstagedFiles
+                                });
+                            }
+                        }
+
+                        function discardAllFiles() {
+                            const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
+                                .map(item => item.getAttribute('data-file'));
+                            if (unstagedFiles.length > 0) {
+                                showModal(
+                                    () => vscode.postMessage({ 
+                                        command: 'discard',
+                                        files: unstagedFiles
+                                    }),
+                                    'Are you sure you want to discard changes in all files?'
+                                );
+                            }
+                        }
+
+                        function unstageAllFiles() {
+                            const stagedFiles = Array.from(document.querySelectorAll('#stagedTree .file-item'))
+                                .map(item => item.getAttribute('data-file'));
+                            if (stagedFiles.length > 0) {
+                                vscode.postMessage({ 
+                                    command: 'unstage',
+                                    files: stagedFiles
+                                });
+                            }
                         }
                     </script>
                 </body>
