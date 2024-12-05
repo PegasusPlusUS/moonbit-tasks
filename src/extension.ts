@@ -210,6 +210,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         if (mbTaskExt.smartCommandEntries.length == 0) {
+            console.log("asyncRefresh " + data.path);
             mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
         }
     }
@@ -265,14 +266,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .section-header .file-actions {
-                            opacity: 0;  /* Initially hidden */
-                            transition: opacity 0.2s;
                             display: flex;
                             gap: 4px;
+                            visibility: hidden;
                         }
 
                         .section-header:hover .file-actions {
-                            opacity: 1;  /* Show on hover */
+                            visibility: visible;
                         }
 
                         .file-tree {
@@ -710,12 +710,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 if (unstagedChanges.length > 0) {
                                     changesHeader.style.display = 'block';
                                     changesTree.style.display = 'block';
-                                    changesHeader.textContent = 'Changes (' + unstagedChanges.length + ')';
+                                    changesHeader.innerHTML = \`
+                                        <span>Changes</span>
+                                        <div class="file-actions">
+                                            <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                                            <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                                        </div>
+                                    \`;
                                 } else {
                                     changesHeader.style.display = 'none';
                                     changesTree.style.display = 'none';
                                 }
                             }
+                            console.log('Changes header after update:', document.getElementById('changesHeader'));
 
                             // Handle Staged section visibility
                             const stagedHeader = document.getElementById('stagedHeader');
@@ -724,13 +731,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     stagedHeader.style.display = 'block';
                                     stagedTree.style.display = 'block';
                                     commitArea.style.display = 'block';
-                                    stagedHeader.textContent = 'Staged (' + stagedChanges.length + ')';
+                                    stagedHeader.innerHTML = \`
+                                        <span>Staged Changes</span>
+                                        <div class="file-actions">
+                                            <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                                        </div>
+                                    \`;
                                 } else {
                                     stagedHeader.style.display = 'none';
                                     stagedTree.style.display = 'none';
                                     commitArea.style.display = 'none';
                                 }
                             }
+                            console.log('Staged header after update:', document.getElementById('stagedHeader'));
 
                             // Render unstaged changes
                             changesTree.innerHTML = unstagedChanges.map(file => {
@@ -765,11 +778,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // Move the interval setup outside of any function
                         // and make sure it runs when the page loads
                         (function setupAutoRefresh() {
+                            // Add console logs to verify element creation
+                            console.log('Changes header:', document.getElementById('changesHeader'));
+                            console.log('Staged header:', document.getElementById('stagedHeader'));
                             console.log('Setting up auto-refresh interval');
                             setInterval(() => {
                                 console.log('Auto-refresh: Getting changes');
                                 vscode.postMessage({ command: 'getChanges' });
-                            }, 5000);
+                            }, 60000);
                         })();
 
                         function gitStage() {
@@ -978,11 +994,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 });
                             }
                         }
+                        // Add console logs to verify element creation
+                        console.log('Changes header:', document.getElementById('changesHeader'));
+                        console.log('Staged header:', document.getElementById('stagedHeader'));
                     </script>
                 </body>
             </html>
         `;
-        console.log('HTML content:', htmlContent);
+        console.log('Begine HTML content:');
+        let lines = htmlContent.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            console.log(lines[i]);
+        }
+        console.log('End HTML content:');
         return htmlContent;
     }
 
