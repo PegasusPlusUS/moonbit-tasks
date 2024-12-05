@@ -551,18 +551,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- /div -->
                     </div>
 
-                    <div id="confirmModal" class="modal-overlay">
-                        <div class="modal">
-                            <div class="modal-content">
-                                Are you sure you want to discard changes in this file?
-                            </div>
-                            <div class="modal-buttons">
-                                <button class="modal-button modal-button-secondary" onclick="closeModal()">Cancel</button>
-                                <button class="modal-button modal-button-primary" onclick="confirmModal()">Discard</button>
-                            </div>
-                        </div>
-                    </div>
-
                     <script>
                         const vscode = acquireVsCodeApi();
 
@@ -671,30 +659,37 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateFileTree(changes) {
                             const changesTree = document.getElementById('changesTree');
                             const stagedTree = document.getElementById('stagedTree');
+                            const commitArea = document.querySelector('.commit-area');
                             
                             // Separate changes into staged and unstaged
                             const unstagedChanges = changes.filter(file => !file.staged);
                             const stagedChanges = changes.filter(file => file.staged);
 
+                            // Handle Changes section visibility
                             const changesHeader = document.getElementById('changesHeader');
                             if (changesHeader) {
                                 if (unstagedChanges.length > 0) {
-                                    changesHeader.visible = true;
+                                    changesHeader.style.display = 'block';
+                                    changesTree.style.display = 'block';
                                     changesHeader.textContent = 'Changes (' + unstagedChanges.length + ')';
                                 } else {
-                                    changesHeader.textContent = 'Changes';
-                                    changesHeader.visible = false;
+                                    changesHeader.style.display = 'none';
+                                    changesTree.style.display = 'none';
                                 }
                             }
 
+                            // Handle Staged section visibility
                             const stagedHeader = document.getElementById('stagedHeader');
                             if (stagedHeader) {
                                 if (stagedChanges.length > 0) {
-                                    stagedHeader.visible = true;
+                                    stagedHeader.style.display = 'block';
+                                    stagedTree.style.display = 'block';
+                                    commitArea.style.display = 'block';
                                     stagedHeader.textContent = 'Staged (' + stagedChanges.length + ')';
                                 } else {
-                                    stagedHeader.textContent = 'Staged';
-                                    stagedHeader.visible = false;
+                                    stagedHeader.style.display = 'none';
+                                    stagedTree.style.display = 'none';
+                                    commitArea.style.display = 'none';
                                 }
                             }
 
@@ -820,7 +815,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function discardFile(filePath) {
-                            showModal(filePath);
+                            vscode.postMessage({ 
+                                command: 'discard',
+                                files: [filePath]
+                            });
                         }
 
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
