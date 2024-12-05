@@ -4,7 +4,6 @@ import { promises as fsPromises } from 'fs';
 import * as fs from 'fs';
 
 import * as helper from './helper'
-import { extension_name } from './language_handler'
 
 let configChangeListener: vscode.Disposable | undefined;
 let extensionContext: vscode.ExtensionContext | undefined; // Store context for later use
@@ -15,7 +14,6 @@ export function activate(context: vscode.ExtensionContext) {
 	asyncInitLangDef();
 }
 
-const configNameGitDef = 'moonbit-tasks.gitDef';
 const configNameLangDef = 'moonbit-tasks.languageHandlerDef';
 
 function startWatchingLangDefChanges() {

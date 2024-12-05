@@ -3,10 +3,9 @@ import * as vscode from 'vscode';
 import * as langDef from './language_def';
 import {
     activeDocumentChanges,
-    detectProjectForActiveDocument,
-    smartTaskRun,
+    asyncDetectProjectForActiveDocument,
+    asyncSmartTaskRun,
 } from './smart_tasks_panel_provider';
-import {gitDef} from "./language_def";
 
 export const extension_name = "moonbit-tasks";
 export function active(context: vscode.ExtensionContext) {
@@ -38,7 +37,7 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
 
     vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
     
-    let result = await detectProjectForActiveDocument();
+    let result = await asyncDetectProjectForActiveDocument();
 
     if (result == undefined || result.handler == undefined) {
         smartTasksRootTitle = "Can't find signature of project";
@@ -46,7 +45,7 @@ export async function refereshSmartTasksDataProvider(documentDir: string) {
         smartTasksRootTitle = "No commands found in signature";
     } else {
         smartCommandEntries = Array.from(result.handler.commands.entries());//.map(([command, shellcmd]) => ({command, shellcmd})));
-        smartTasksDir = documentDir;
+        smartTasksDir = result.rootPath ? result.rootPath : "";
     }
 
     vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);

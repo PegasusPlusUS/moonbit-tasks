@@ -81,8 +81,8 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
     // Register the tree item selected command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async(shellcmd: any) => {
-            await smartTaskExt.smartTaskRun(shellcmd);
+        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async(shellcmd: any, view:vscode.Webview) => {
+            smartTaskExt.asyncSmartTaskRun(shellcmd, view);
         })
     );
 }
@@ -142,7 +142,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'smartTasksTreeItemSelected':
                     // Execute the command when tree item is selected
-                    vscode.commands.executeCommand('moonbit-tasks.smartTasksTreeItemSelected', data.itemId);
+                    vscode.commands.executeCommand('moonbit-tasks.smartTasksTreeItemSelected', data.itemId, this);
                     break;
                 case 'unstage':
                     if (data.files) {
