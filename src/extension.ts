@@ -451,6 +451,58 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .select-control:hover {
                             cursor: pointer;
                         }
+
+                        .modal-overlay {
+                            display: none;
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background-color: rgba(0, 0, 0, 0.5);
+                            z-index: 1000;
+                        }
+
+                        .modal {
+                            position: fixed;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%);
+                            background-color: var(--vscode-editor-background);
+                            padding: 16px;
+                            border-radius: 4px;
+                            border: 1px solid var(--vscode-widget-border);
+                            min-width: 300px;
+                            z-index: 1001;
+                        }
+
+                        .modal-content {
+                            margin-bottom: 16px;
+                            color: var(--vscode-foreground);
+                        }
+
+                        .modal-buttons {
+                            display: flex;
+                            justify-content: flex-end;
+                            gap: 8px;
+                        }
+
+                        .modal-button {
+                            padding: 4px 12px;
+                            border-radius: 2px;
+                            border: none;
+                            cursor: pointer;
+                        }
+
+                        .modal-button-primary {
+                            background-color: var(--vscode-button-background);
+                            color: var(--vscode-button-foreground);
+                        }
+
+                        .modal-button-secondary {
+                            background-color: var(--vscode-button-secondaryBackground);
+                            color: var(--vscode-button-secondaryForeground);
+                        }
                     </style>
                 </head>
                 <body>
@@ -497,6 +549,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <!-- Smart Tasks tree items will be populated here -->
                             </div>
                         <!-- /div -->
+                    </div>
+
+                    <div id="confirmModal" class="modal-overlay">
+                        <div class="modal">
+                            <div class="modal-content">
+                                Are you sure you want to discard changes in this file?
+                            </div>
+                            <div class="modal-buttons">
+                                <button class="modal-button modal-button-secondary" onclick="closeModal()">Cancel</button>
+                                <button class="modal-button modal-button-primary" onclick="confirmModal()">Discard</button>
+                            </div>
+                        </div>
                     </div>
 
                     <script>
@@ -756,10 +820,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function discardFile(filePath) {
-                            vscode.postMessage({ 
-                                command: 'discard',
-                                files: [filePath]
-                            });
+                            showModal(filePath);
                         }
 
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
@@ -812,6 +873,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 branch: e.target.value
                             });
                         });
+
+                        let pendingDiscardFile = null;
+
+                        function showModal(filePath) {
+                            pendingDiscardFile = filePath;
+                            document.getElementById('confirmModal').style.display = 'block';
+                        }
+
+                        function closeModal() {
+                            pendingDiscardFile = null;
+                            document.getElementById('confirmModal').style.display = 'none';
+                        }
+
+                        function confirmModal() {
+                            if (pendingDiscardFile) {
+                                vscode.postMessage({ 
+                                    command: 'discard',
+                                    files: [pendingDiscardFile]
+                                });
+                            }
+                            closeModal();
+                        }
                     </script>
                 </body>
             </html>
@@ -918,28 +1001,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            
-            // Show confirmation dialog
-            const result = await vscode.window.showWarningMessage(
-                'Are you sure you want to discard changes in this file?',
-                'Yes',
-                'No'
-            );
-            
-            if (result === 'Yes') {
-                try {
-                    await repo.clean(files);
-                    webview.postMessage({ 
-                        type: 'info', 
-                        message: 'Changes discarded successfully'
-                    });
-                    await this.getGitChanges(webview); // Refresh status
-                } catch (error: any) {
-                    webview.postMessage({ 
-                        type: 'error', 
-                        message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
-                    });
-                }
+            try {
+                await repo.clean(files);
+                webview.postMessage({ 
+                    type: 'info', 
+                    message: 'Changes discarded successfully'
+                });
+                await this.getGitChanges(webview); // Refresh status
+            } catch (error: any) {
+                webview.postMessage({ 
+                    type: 'error', 
+                    message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
+                });
             }
         }
     }
