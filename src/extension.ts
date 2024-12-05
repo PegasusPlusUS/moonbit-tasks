@@ -1,6 +1,9 @@
-// Add this at the top of your file, before any other code
+// Suppress Buffer() deprecation warning from C# extension
+process.removeAllListeners('warning');
 process.on('warning', (warning) => {
-    console.log(warning.stack);
+    if (!warning.message.includes('Buffer() is deprecated')) {
+        console.log(warning.stack);
+    }
 });
 
 import * as mbTaskExt from './language_handler';
@@ -755,7 +758,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             changesTree.innerHTML = unstagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
                                 return \`
-                                    <div class="file-item" data-file="\${file.path}">
+                                    <div class="file-item" data-file="\${file.path}" onclick="openDiff('\${doubleEscape(file.path)}', false)">
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
@@ -770,7 +773,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             stagedTree.innerHTML = stagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
                                 return \`
-                                    <div class="file-item" data-file="\${file.path}">
+                                    <div class="file-item" data-file="\${file.path}" onclick="openDiff('\${doubleEscape(file.path)}', true)">
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
@@ -1003,6 +1006,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // Add console logs to verify element creation
                         console.log('Changes header:', document.getElementById('changesHeader'));
                         console.log('Staged header:', document.getElementById('stagedHeader'));
+
+                        // Function to open diff view
+                        function openDiff(filePath, isStaged) {
+                            const uri = vscode.Uri.file(filePath);
+                            const leftUri = isStaged ? uri.with({ scheme: 'git', path: uri.path + '.staged' }) : uri.with({ scheme: 'git', path: uri.path + '.working' });
+                            const rightUri = uri;
+                            vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, \`Diff: \${filePath}\`);
+                        }
                     </script>
                 </body>
             </html>
