@@ -273,4 +273,6 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 ### 0.12.2024120501
 
+- Fix current repo not sync with selected repo
+
 - Watch git root file system change
