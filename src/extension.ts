@@ -456,7 +456,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 <body>
                     <div class="panel-container">
                         <!-- Git Source Control Panel -->
-                        <div class="git-panel">
+                        <!-- div class="git-panel" -->
                             <div class="section-header">
                                 <div class="header-controls">
                                     <div class="dropdown-container">
@@ -486,17 +486,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <div class="commit-area">
                                 <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
                             </div>
-                        </div>
+                        <!-- /div -->
 
                         <div id="statusMessage" class="status-message"></div>
 
                         <!-- Project Smart Tasks Tree View Panel -->
-                        <div class="smart-tasks-panel">
+                        <!-- div class="smart-tasks-panel" -->
                             <div class="section-header">Project Tasks</div>
                             <div id="smartTasksTreeView" class="tree-view">
                                 <!-- Smart Tasks tree items will be populated here -->
                             </div>
-                        </div>
+                        <!-- /div -->
                     </div>
 
                     <script>

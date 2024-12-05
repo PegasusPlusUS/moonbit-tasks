@@ -224,7 +224,7 @@ function checkSignatureForActiveFile(activeEditor: vscode.TextEditor, projectDir
 	return { projectDir, handler };
 }
 
-async function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) {
+async function runCmdInTerminal(cmd: string, cwd: string) {
 	async function getShellPath(): Promise<string> {
 		let defaultTerminalShellPath : string = "";
 		let terminalProfilePath : string = "windows";
@@ -268,6 +268,7 @@ async function runCmdInTerminal(cmd: string | undefined, cwd: string|undefined) 
 	// Run a shell command in the terminal
 	if (helper.isValidString(cwd)) {
 		// Need check if diectory exists?
+		cwd = cwd.replace(/\\/g, "\\\\");
 		myTerminal.sendText(`cd "${cwd}"`);
 	}
 	else {
