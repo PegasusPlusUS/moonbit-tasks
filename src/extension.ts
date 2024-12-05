@@ -712,7 +712,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     changesHeader.style.display = 'block';
                                     changesTree.style.display = 'block';
                                     changesHeader.innerHTML = \`
-                                        <span>Changes</span>
+                                        <span>Changes (\${unstagedChanges.length})</span>
                                         <div class="file-actions">
                                             <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
                                             <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
@@ -733,7 +733,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     stagedTree.style.display = 'block';
                                     commitArea.style.display = 'block';
                                     stagedHeader.innerHTML = \`
-                                        <span>Staged Changes</span>
+                                        <span>Staged Changes (\${stagedChanges.length})</span>
                                         <div class="file-actions">
                                             <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
                                         </div>

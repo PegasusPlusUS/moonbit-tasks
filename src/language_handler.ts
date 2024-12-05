@@ -32,6 +32,7 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     smartTasksRootTitle = "Detecting " + documentPathOrDir;
     smartCommandEntries = [];
 
+    console.log(smartTasksRootTitle);
     vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
     
     let result = await asyncDetectProjectForDocumentOrDirectory(documentPathOrDir);

@@ -94,6 +94,30 @@ async function searchProjectAtDirectory(fileDir: string): Promise<langDef.handle
 // otherwise search project from the document dir and up within
 // workspace
 export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir: string) : Promise<projectDef|undefined> {
+	// check if a target file is signature of a project
+	function checkSignature(filePath: string) : projectDef | undefined {	
+		let found = false;
+		let basename = path.basename(filePath);
+		for (let [_languageName, cmdHandler] of langDef.languageHandlerMap) {
+			// *.nimble
+			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
+				const extensions = cmdHandler.signatureFilePattern.split('|');
+				for (let ext of extensions) {
+					found = (ext.length > 0) &&
+						((ext[0] != '*') ? cmdHandler.signatureFilePattern == basename
+						: basename.endsWith(ext.slice(1))
+					);
+
+					if (found) {
+						return new projectDef(path.dirname(filePath), cmdHandler);
+					}
+				}
+			}
+		}
+
+		return undefined;
+	}
+
 	let projectFound : projectDef | undefined;
 	try {
 		const stats = await fsPromises.stat(documentPathOrDir);
@@ -106,45 +130,10 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 			projectFound = await searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
 		}
 	} catch (err) {
-		//vscode.window.showWarningMessage(`Error occurred while searching project signature file: ${err}`);
+		console.log(`Error occurred while searching project signature file: ${err}`);
 	}
 	return projectFound;
 }
-
-// async function searchSignatureFromWorkSpace(fileDir: string) : Promise<projectDef|undefined> {
-// 	let projectDir : string | undefined;
-// 	let handler : langDef.handlerInfo | undefined;
-
-// 	const workspaceFolders = vscode.workspace.workspaceFolders;
-// 	if (workspaceFolders !== undefined && workspaceFolders !== null) {
-// 		// Check each workspace folder to see if the file is in it and keep the folder that has maximum length
-// 		let rootDir: vscode.WorkspaceFolder | undefined;
-// 		let maxPathLength = 0;
-// 		workspaceFolders.forEach(folder => {
-// 			const pathLength = folder.uri.fsPath.length;
-// 			if (fileDir.startsWith(folder.uri.fsPath) && pathLength > maxPathLength) {
-// 				maxPathLength = pathLength;
-// 				rootDir = folder;
-// 			}
-// 		});
-// 		if (rootDir != undefined && rootDir.uri.fsPath.length > 0) {
-// 			handler = await searchProjectAtDirectory(rootDir.uri.fsPath);
-// 			if (langDef.handlerInfo.isValid(handler)) {
-// 				projectDir = rootDir.uri.fsPath;
-// 			}
-// 			else {
-// 				for (let folder of workspaceFolders) {
-// 					handler = await searchProjectAtDirectory(folder.uri.fsPath);
-// 					if (langDef.handlerInfo.isValid(handler)) {
-// 						projectDir = folder.uri.fsPath;
-// 						break;
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return  new projectDef(projectDir, handler);
-// }
 
 async function searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) : Promise<projectDef> {
 	let handler: langDef.handlerInfo | undefined;
@@ -173,30 +162,6 @@ async function searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) :
 		break;
 	}
 	return new projectDef(projectDir, handler);
-}
-
-// check if a target file is signature of a project
-function checkSignature(filePath: string) : projectDef | undefined {	
-	let found = false;
-	let basename = path.basename(filePath);
-	for (let [_languageName, cmdHandler] of langDef.languageHandlerMap) {
-		// *.nimble
-		if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
-			const extensions = cmdHandler.signatureFilePattern.split('|');
-			for (let ext of extensions) {
-				found = (ext.length > 0) &&
-					((ext[0] != '*') ? cmdHandler.signatureFilePattern == basename
-					 : basename.endsWith(ext.slice(1))
-				);
-
-				if (found) {
-					return new projectDef(path.dirname(filePath), cmdHandler);
-				}
-			}
-		}
-	}
-
-	return undefined;
 }
 
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task
