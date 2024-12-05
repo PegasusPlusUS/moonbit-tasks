@@ -1,3 +1,8 @@
+// Add this at the top of your file, before any other code
+process.on('warning', (warning) => {
+    console.log(warning.stack);
+});
+
 import * as mbTaskExt from './language_handler';
 import * as smartTaskExt from './smart_tasks_panel_provider';
 
