@@ -108,7 +108,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         webviewView.onDidChangeVisibility(() => {
             if (webviewView.visible) {
                 // View became visible
-                mbTaskExt.refereshSmartTasksDataProvider("");
+                if (mbTaskExt.smartCommandEntries.length == 0) {
+                    smartTaskExt.asyncActiveDocumentChangesHandler(vscode.window.activeTextEditor);
+                }
             } else {
                 // View was hidden
                 //this.onViewHidden();
@@ -208,7 +210,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         if (mbTaskExt.smartCommandEntries.length == 0) {
-            mbTaskExt.refereshSmartTasksDataProvider(data.path);
+            mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
         }
     }
 
@@ -1103,7 +1105,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             // If there's no tasks detected, try detect git path
             if (currentRepoPath && currentRepoPath !== '') {
                 if (mbTaskExt.smartCommandEntries.length == 0) {
-                    mbTaskExt.refereshSmartTasksDataProvider(currentRepoPath);
+                    mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath);
                 }
             }
 

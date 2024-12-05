@@ -4,7 +4,7 @@ import { access as fsAccess, constants as fsConstants, promises as fsPromises } 
 
 import * as helper from './helper';
 import * as langDef from './language_def';
-import { refereshSmartTasksDataProvider, smartTasksDir } from "./language_handler";
+import { asyncRefereshSmartTasksDataProvider, smartTasksDir } from "./language_handler";
 
 export class projectDef {
 	rootPath: string | undefined;
@@ -93,33 +93,22 @@ async function searchProjectAtDirectory(fileDir: string): Promise<langDef.handle
 // check if the active document is a signature of a project,
 // otherwise search project from the document dir and up within
 // workspace
-export async function asyncDetectProjectForActiveDocument() : Promise<projectDef|undefined> {
+export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir: string) : Promise<projectDef|undefined> {
 	let projectFound : projectDef | undefined;
-
-	// Get the current active file in the Explorer
-	const activeEditor = vscode.window.activeTextEditor;
-	if (activeEditor) {
-		const filePath = activeEditor.document.uri.fsPath;
-		const fileDir = path.dirname(filePath);  // Get the directory of the current file
-		try {
-			projectFound = checkSignature(filePath);
-
-			if (projectFound == undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
-				projectFound = await searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
-			}
-
-			// if (projectFound == undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
-			// 	// The root path that contain current document
-			// 	// Get the workspace folders
-			// 	projectFound = await searchSignatureFromWorkSpace(fileDir);
-			// }
-			return projectFound;
-		} catch (err) {
-			//vscode.window.showWarningMessage(`Error occurred while searching project signature file: ${err}`);
+	try {
+		const stats = await fsPromises.stat(documentPathOrDir);
+		if (stats.isFile()) {
+			projectFound = checkSignature(documentPathOrDir);
 		}
-	} else {
-		//vscode.window.showWarningMessage("No active file found.");
+
+		if (projectFound == undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
+			const fileDir = stats.isFile() ? path.dirname(documentPathOrDir) : documentPathOrDir;  // Get the directory of the current file
+			projectFound = await searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
+		}
+	} catch (err) {
+		//vscode.window.showWarningMessage(`Error occurred while searching project signature file: ${err}`);
 	}
+	return projectFound;
 }
 
 // async function searchSignatureFromWorkSpace(fileDir: string) : Promise<projectDef|undefined> {
@@ -254,15 +243,16 @@ async function asyncRunCmdInTerminal(cmd: string, cwd: string, view:vscode.Webvi
 
 let lastActiveDocumentDir : string = "";
 
-export async function activeDocumentChanges(editor:any) {
+export async function asyncActiveDocumentChangesHandler(editor:any) {
 	if (editor) {
-		let documentDir = path.dirname(editor.document.uri.fsPath);
+		let documentPath = editor.document.uri.fsPath;
+		let documentDir = path.dirname(documentPath);
 		let refresh = lastActiveDocumentDir != documentDir;
 
 		// If path changes, rescan for project type
 		if (refresh) {
 			lastActiveDocumentDir = documentDir;
-			refereshSmartTasksDataProvider(documentDir);
+			asyncRefereshSmartTasksDataProvider(documentPath);
 		}
 	} else {
 		// console.log("No active editor.");
