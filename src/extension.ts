@@ -100,7 +100,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'moonbit-tasks.gitView';
     public _webview?: vscode.Webview;  // Made public so command can access it
 
-    constructor(private readonly _extensionUri: vscode.Uri) {}
+    constructor(private readonly _extensionUri: vscode.Uri) {
+        this.hasHidden = false;
+        this.hasVisible = false;
+    }
+
+    hasVisible : boolean;
+    hasHidden: boolean;
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -116,11 +122,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         // Listen for visibility changes
         webviewView.onDidChangeVisibility(() => {
             if (webviewView.visible) {
+                this.hasVisible = true;
+
                 // View became visible
-                if (mbTaskExt.smartCommandEntries.length == 0) {
-                    smartTaskExt.asyncActiveDocumentChangesHandler(vscode.window.activeTextEditor);
+                if (this.hasHidden) {
+                    this.updateSmartTasksTreeView(webviewView.webview);
                 }
             } else {
+                this.hasHidden = true;
                 // View was hidden
                 //this.onViewHidden();
             }
@@ -203,6 +212,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
                     }
                     break;
+                case 'viewAllChanges':
+                    await this.viewAllChanges(data.isStaged, webviewView.webview);
+                    break;
+                case 'viewFileChanges':
+                    await this.viewFileChanges(data.filePath, data.isStaged, webviewView.webview);
+                    break;
             }
         });
 
@@ -237,6 +252,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         return path;
+    }
+
+    private async viewAllChanges(isStaged: boolean, webview: vscode.Webview) {
+        // TODO: Implement
+    }
+
+    private async viewFileChanges(filePath: string, isStaged: boolean, webview: vscode.Webview) {
+        console.log(`Opening diff for: ${filePath}, staged: ${isStaged}`);
+        const uri = vscode.Uri.file(filePath);
+        const leftUri = isStaged ? uri.with({ scheme: 'git', path: uri.path + '.staged' }) : uri.with({ scheme: 'git', path: uri.path + '.working' });
+        const rightUri = uri;
+        vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `Diff: ${filePath}`);
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
@@ -722,6 +749,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     changesHeader.innerHTML = \`
                                         <span>Changes (\${unstagedChanges.length})</span>
                                         <div class="file-actions">
+                                            <button class="action-button" onclick="viewAllChanges(false)" title="View Changes">+/-</button>
                                             <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
                                             <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
                                         </div>
@@ -743,6 +771,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     stagedHeader.innerHTML = \`
                                         <span>Staged Changes (\${stagedChanges.length})</span>
                                         <div class="file-actions">
+                                            <button class="action-button" onclick="viewAllChanges(true)" title="View StagedChanges">+/-</button>
                                             <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
                                         </div>
                                     \`;
@@ -762,6 +791,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Changes">+/-</button>
                                             <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
                                             <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
                                         </div>
@@ -777,6 +807,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Changes">+/-</button>
                                             <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
                                         </div>
                                     </div>
@@ -1009,10 +1040,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         // Function to open diff view
                         function openDiff(filePath, isStaged) {
+                            console.log(\`Opening diff for: \${filePath}, staged: \${isStaged}\`);
                             const uri = vscode.Uri.file(filePath);
                             const leftUri = isStaged ? uri.with({ scheme: 'git', path: uri.path + '.staged' }) : uri.with({ scheme: 'git', path: uri.path + '.working' });
                             const rightUri = uri;
                             vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, \`Diff: \${filePath}\`);
+                        }
+
+                        function viewAllChanges(isStaged) {
+                            vscode.postMessage({
+                                command: 'viewAllChanges',
+                                isStaged: isStaged
+                            });
+                        }
+
+                        function viewFileChanges(filePath, isStaged) {
+                            vscode.postMessage({
+                                command: 'viewFileChanges',
+                                filePath: filePath,
+                                isStaged: isStaged
+                            });
                         }
                     </script>
                 </body>
