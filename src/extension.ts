@@ -756,12 +756,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function discardFile(filePath) {
-                            if (confirm('Are you sure you want to discard changes in this file?')) {
-                                vscode.postMessage({ 
-                                    command: 'discard',
-                                    files: [filePath]
-                                });
-                            }
+                            vscode.postMessage({ 
+                                command: 'discard',
+                                files: [filePath]
+                            });
                         }
 
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
@@ -920,18 +918,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         const git = await this.getGitAPI(webview);
         if (git && git.repositories.length > 0) {
             const repo = git.repositories[0];
-            try {
-                await repo.clean(files);
-                webview.postMessage({ 
-                    type: 'info', 
-                    message: 'Changes discarded successfully'
-                });
-                await this.getGitChanges(webview); // Refresh status
-            } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
-                    message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
-                });
+            
+            // Show confirmation dialog
+            const result = await vscode.window.showWarningMessage(
+                'Are you sure you want to discard changes in this file?',
+                'Yes',
+                'No'
+            );
+            
+            if (result === 'Yes') {
+                try {
+                    await repo.clean(files);
+                    webview.postMessage({ 
+                        type: 'info', 
+                        message: 'Changes discarded successfully'
+                    });
+                    await this.getGitChanges(webview); // Refresh status
+                } catch (error: any) {
+                    webview.postMessage({ 
+                        type: 'error', 
+                        message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
+                    });
+                }
             }
         }
     }
