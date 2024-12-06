@@ -240,12 +240,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const filePath = data.filePath;
                             const fileUri = vscode.Uri.file(filePath);
                             
+                            // For both staged and unstaged files
+                            vscode.commands.executeCommand('git.openChange', fileUri);
+
+                            // If it's staged, we need to switch to the staged version
                             if (data.isStaged) {
-                                //vscode.commands.executeCommand('git.openHeadFile', fileUri);
-                                const originalUri = fileUri.with({ scheme: 'git-index', path: fileUri.path });
-                                vscode.commands.executeCommand('vscode.open', originalUri);
-                            } else {
-                                vscode.commands.executeCommand('git.openChange', fileUri);
+                                // Try to switch to staged version after a small delay
+                                setTimeout(async () => {
+                                    await vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
+                                }, 500);
                             }
                         } catch (error: any) {
                             webviewView.webview.postMessage({ 
