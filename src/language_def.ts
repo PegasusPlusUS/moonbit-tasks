@@ -154,10 +154,13 @@ async function asyncInitLangDef() {
 				['Format', 'cargo fmt'],
 				['Clippy', 'cargo clippy'],
 				['Coverage','cargo tarpaulin'],
+				['GCov', 'cargo gcov'],
+				['Benchmark', 'cargo bench'],
 				['Doc', 'cargo d'],
 				['Clean', 'cargo clean'],
 				['Update', 'cargo update'],
 				['Publish', 'cargo publish'],
+				['Upgrade', 'rustup upgrade'],
 			]))],
 			['Nim', new handlerInfo('*.nimble', new Map([
 				['run', 'nimble run'],

@@ -39,12 +39,14 @@ const taskIconMap: { [key: string]: string } = {
     'package': 'codicon-archive',        // Archive/box for packaging
     'publish': 'codicon-cloud-upload',   // Cloud upload for publishing
     'coverage': 'codicon-shield',        // Shield for code coverage
+    'gcov': 'codicon-graph',            // Graph for gcov
     'format': 'codicon-symbol-color',    // Color/format symbol
     'clean': 'codicon-trash',            // Trash can for clean
     'clippy': 'codicon-lightbulb',      // Clippy for smart tasks
+    'benchmark': 'codicon-graph',        // Benchmark icon
     'doc': 'codicon-book',              // Book for documentation
     'update': 'codicon-sync',           // Sync for update
-    'upgrade': 'codicon-sync',           // Upgrade for upgrade
+    'upgrade': 'codicon-rocket',           // Upgrade for upgrade
     'debug': 'codicon-debug',      // Debug icon
     'rocket': 'codicon-rocket',         // Rocket for launch
     'verified': 'codicon-verified',     // Verified icon
