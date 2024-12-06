@@ -312,3 +312,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120605
 
 - Fix extension search slice processing.
+
+### 0.12.2024120606
+
+- Show repository selector even only one.

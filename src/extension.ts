@@ -1140,7 +1140,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // Update repository list visibility
                             if (repoSelect) {
-                                if (repositories.length <= 1) {
+                                if (repositories.length < 1) {
                                     repoSelect.style.display = 'none';
                                 } else {
                                     repoSelect.style.display = 'block';
