@@ -740,7 +740,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     <div class="dropdown-container">
                                         <select id="repoSelect" class="select-control" title="Select Repository">
                                             <!-- Repositories will be populated here -->
-                                        </select>
+                                        </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
                                         <select id="branchSelect" class="select-control" title="Select Branch">
                                             <!-- Branches will be populated here -->
                                         </select>
@@ -1092,6 +1092,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
                             const repoSelect = document.getElementById('repoSelect');
                             const branchSelect = document.getElementById('branchSelect');
+                            const branchIcon = document.getElementById('branchIcon');
 
                             // Update repository list visibility
                             if (repoSelect) {
@@ -1109,10 +1110,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
 
                             // Update branch list
-                            if (branchSelect) {
+                            if (branchSelect && branchIcon) {
                                 if (repositories.length < 1) {
                                     branchSelect.style.display = 'none';
+                                    branchIcon.style.display = 'none';
                                 } else {
+                                    branchSelect.style.display = 'block';
+                                    branchIcon.style.display = 'block';
                                     // First check if current branch exists in the list
                                     const branchExists = branches.some(branch => branch.name === currentBranch);
                                     
