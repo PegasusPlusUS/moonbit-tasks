@@ -1518,19 +1518,30 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            //console.log('Refs:', refs); // Debug log
+            console.log('Refs:', refs); // Debug log
 
             const branches = refs
                 .filter((ref: any) => {
                     // Include only local branches; exclude HEAD and remote branches
-                    return ref.name && ref.type === 'branch' && !ref.name.startsWith('refs/remotes/');
+                    return ref.name && ref.name != 'HEAD' && !(ref.name.includes('/') || ref.remote);
                 })
-                .map((branch: any) => {
+                .map(async (branch: any) => {
                     // Attempt to fetch upstream information
-                    const upstream = branch.upstream ? branch.upstream.name : null;
-
+                    const branchName = branch.name || '';
+                    let upstream = null;
+        
+                    try {
+                        // Fetch branch details for upstream info
+                        const branchDetails = await repo.getBranch(branchName);
+                        if (branchDetails.upstream) {
+                            upstream = branchDetails.upstream.remote + '/' + branchDetails.upstream.name;
+                        }
+                    } catch (err) {
+                        console.warn(`Failed to get upstream for branch ${branchName}:`, err);
+                    }
+        
                     return {
-                        name: branch.name || '',
+                        name: branchName,
                         tooltip: upstream ? `-> ${upstream}` : 'No upstream branch',
                     };
                 });
