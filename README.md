@@ -295,3 +295,9 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Add 'Benchmark' tasks
 
+### 0.12.2024120603
+
+- async error catching
+
+- init refresh timing adjust
+

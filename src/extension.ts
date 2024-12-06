@@ -251,7 +251,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     console.log("asyncRefresh " + data.path);
                                     mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
                                 }
-                                await this.getGitChanges(webviewView.webview);
+                                this.getGitChanges(webviewView.webview);
                             } catch (error: any) {
                                 webviewView.webview.postMessage({
                                     type: 'error',
@@ -313,11 +313,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             for (const resource of resources) {
                                 console.log(`Resource: ${resource.originalUri}, ${resource.modifiedUri}`);
                             }
-                            vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
-                                multiDiffSourceUri,
-                                title: 'Git: ' + (data.isStaged ? 'Staged ' : '') + 'Changes',
-                                resources: resources
-                            });
+
+                            async function safeAsyncExec() {
+                                try {
+                                    await vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
+                                        multiDiffSourceUri,
+                                        title: 'Git: ' + (data.isStaged ? 'Staged ' : '') + 'Changes',
+                                        resources: resources
+                                    });
+                                } catch (error) {
+                                    console.log(`Error while execute '_workbench.openMultiDiffEditor': ${error}`);
+                                }
+                            }
+                            safeAsyncExec();
                         } catch (error: any) {
                             webviewView.webview.postMessage({
                                 type: 'error',
@@ -335,19 +343,33 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         const fileUri = vscode.Uri.file(filePath);
 
                         // For both staged and unstaged files
-                        vscode.commands.executeCommand('git.openChange', fileUri);
+                        async function safeAsyncOpenChange() {
+                            try {
+                                await  vscode.commands.executeCommand('git.openChange', fileUri);
+                            } catch (error) {
+                                console.log(`Error while executeCommand 'git.openChange', ${error}`);
+                            }
+                        }
+                        safeAsyncOpenChange();
 
                         // If it's staged, we need to switch to the staged version
                         if (data.isStaged) {
                             // Try to switch to staged version after a small delay
                             setTimeout(async () => {
-                                vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
-                            }, 500);
+                                async function safeAsyncSwitch() {
+                                    try {
+                                        await vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
+                                    } catch (error) {
+                                        console.log(`Error while executing vscode.commands 'workbench.action.compareEditor.switchToSecondary', ${error}`);
+                                    }
+                                }
+                                safeAsyncSwitch();
+                            }, 500);``
                         }
                     } catch (error: any) {
                         webviewView.webview.postMessage({
                             type: 'error',
-                            message: 'Failed to open diff: ' + (error.message || 'Unknown error')
+                            message: 'Failed to view changes: ' + (error.message || 'Unknown error')
                         });
                     }
                     //}
@@ -872,9 +894,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
                         });
 
-                        // Initialize by getting changes
-                        vscode.postMessage({ command: 'getChanges' });
-
                         function gitPull() {
                             vscode.postMessage({ command: 'pull' });
                         }
@@ -984,15 +1003,32 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // Move the interval setup outside of any function
                         // and make sure it runs when the page loads
                         (function setupAutoRefresh() {
-                            // Add console logs to verify element creation
-                            console.log('Changes header:', document.getElementById('changesHeader'));
-                            console.log('Staged header:', document.getElementById('stagedHeader'));
-                            console.log('Setting up auto-refresh interval');
-                            setInterval(() => {
-                                console.log('Auto-refresh: Getting changes');
-                                vscode.postMessage({ command: 'getChanges' });
-                            }, 60000);
+                            let intervalID;
+
+                            function startInterval(delay) {
+                                if (intervalID) {
+                                    console.log(\`Clear interval \${intervalID}\`);
+                                    clearInterval(intervalID);
+                                }
+
+                                console.log(\`Setting up auto-refresh interval \${delay}ms\`);
+                                intervalID = setInterval(() => {
+                                    // if git branch init OK, reduce interval to 60s
+                                    const branchSelect = document.getElementById('branchSelect');
+                                    if (branchSelect && branchSelect.style.display != 'none') {
+                                        startInterval(60000);
+                                    }
+
+                                    console.log('Auto-refresh: Getting changes');
+                                    vscode.postMessage({ command: 'getChanges' });
+                                }, delay);
+                            }
+                            
+                            startInterval(1000);
                         })();
+
+                        // Initialize by getting changes
+                        vscode.postMessage({ command: 'getChanges' });
 
                         function gitStage() {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
