@@ -194,3 +194,10 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Fix current repo not sync with selected repo
 
 - Watch git root file system change
+
+- Fix repo root path for Windows
+
+- Click to view diff on changes (but not on staged changes yet)
+
+-- Watch git root or current repo for file system changes to getGitChanges
+

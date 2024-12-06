@@ -275,4 +275,10 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Fix current repo not sync with selected repo
 
-- Watch git root file system change
+- Fix repo root path for Windows
+
+- Click to view diff on changes (but not on staged changes yet)
+
+-- Watch git root or current repo for file system changes to getGitChanges
+
+

@@ -99,6 +99,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'moonbit-tasks.gitView';
     public _webview?: vscode.Webview;  // Made public so command can access it
+    private fileSystemWatcher: vscode.FileSystemWatcher | undefined;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this.hasHidden = false;
@@ -213,10 +214,46 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 case 'viewAllChanges':
-                    await this.viewAllChanges(data.isStaged, webviewView.webview);
+                    console.log(`Opening all diffs for staged: ${data.isStaged}`);
+                    //const repo = await this.getCurrentRepository(webviewView.webview);
+                    //if (repo) {
+                        try {
+                            const uris = data.files.map((filePath:string) => vscode.Uri.file(filePath));
+                            if (data.isStaged) {
+                                await vscode.commands.executeCommand('git.openIndexChange', ...uris);
+                            } else {
+                                await vscode.commands.executeCommand('git.openChange', ...uris);
+                            }
+                        } catch (error: any) {
+                            webviewView.webview.postMessage({ 
+                                type: 'error', 
+                                message: 'Failed to open diffs: ' + (error.message || 'Unknown error')
+                            });
+                        }
+                    //}
                     break;
                 case 'viewFileChanges':
-                    await this.viewFileChanges(data.filePath, data.isStaged, webviewView.webview);
+                    console.log(`Opening diff for: ${data.filePath}, staged: ${data.isStaged}`);
+                    //const repo = await this.getCurrentRepository(webviewView.webview);
+                    //if (repo) {
+                        try {
+                            const filePath = data.filePath;
+                            const fileUri = vscode.Uri.file(filePath);
+                            
+                            if (data.isStaged) {
+                                //vscode.commands.executeCommand('git.openHeadFile', fileUri);
+                                const originalUri = fileUri.with({ scheme: 'git-index', path: fileUri.path });
+                                vscode.commands.executeCommand('vscode.open', originalUri);
+                            } else {
+                                vscode.commands.executeCommand('git.openChange', fileUri);
+                            }
+                        } catch (error: any) {
+                            webviewView.webview.postMessage({ 
+                                type: 'error', 
+                                message: 'Failed to open diff: ' + (error.message || 'Unknown error')
+                            });
+                        }
+                    //}
                     break;
             }
         });
@@ -749,7 +786,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     changesHeader.innerHTML = \`
                                         <span>Changes (\${unstagedChanges.length})</span>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewAllChanges(false)" title="View Changes">+/-</button>
+                                            <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
                                             <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
                                             <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
                                         </div>
@@ -771,7 +808,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     stagedHeader.innerHTML = \`
                                         <span>Staged Changes (\${stagedChanges.length})</span>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewAllChanges(true)" title="View StagedChanges">+/-</button>
+                                            <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
                                             <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
                                         </div>
                                     \`;
@@ -791,7 +828,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Changes">+/-</button>
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Diff">🔍</button>
                                             <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
                                             <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
                                         </div>
@@ -807,7 +844,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Changes">+/-</button>
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Diff">🔍</button>
                                             <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
                                         </div>
                                     </div>
@@ -1048,13 +1085,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function viewAllChanges(isStaged) {
+                            console.log(\`Sending viewAllChanges message for staged: \${isStaged}\`);
+                            const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
+                                .map(item => item.getAttribute('data-file'));
+                            
                             vscode.postMessage({
                                 command: 'viewAllChanges',
+                                files: files,
                                 isStaged: isStaged
                             });
                         }
 
                         function viewFileChanges(filePath, isStaged) {
+                            console.log(\`Sending viewFileChanges message for: \${filePath}, staged: \${isStaged}\`);
                             vscode.postMessage({
                                 command: 'viewFileChanges',
                                 filePath: filePath,
@@ -1345,6 +1388,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
             });
         }
+    
+        // Setup file system watcher when repository is available
+        this.setupFileSystemWatcher(webview);
     }
 
     private async getGitAPI(webview: vscode.Webview) {
@@ -1388,5 +1434,34 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             type: 'updateSmartTasksTree',
             items: treeItems
         });
+    }
+
+    private async setupFileSystemWatcher(webview: vscode.Webview) {
+        const repo = await this.getCurrentRepository(webview);
+        if (repo && repo.rootUri) {
+            // Dispose existing watcher if any
+            this.fileSystemWatcher?.dispose();
+
+            // Create new watcher for the repository root
+            this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher(
+                new vscode.RelativePattern(mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path), '**/*')
+            );
+
+            // Watch for all file system events
+            this.fileSystemWatcher.onDidChange(() => {
+                this.getGitChanges(webview);
+            });
+            this.fileSystemWatcher.onDidCreate(() => {
+                this.getGitChanges(webview);
+            });
+            this.fileSystemWatcher.onDidDelete(() => {
+                this.getGitChanges(webview);
+            });
+        }
+    }
+
+    // Make sure to dispose the watcher when the extension is deactivated
+    public dispose() {
+        this.fileSystemWatcher?.dispose();
     }
 }
