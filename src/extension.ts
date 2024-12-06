@@ -672,6 +672,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             font-size: 16px;
                             line-height: 16px;
                         }
+                            
+                        .action-button.has-updates {
+                            color: var(--vscode-gitDecoration-untrackedResourceForeground);
+                            font-weight: bold;
+                        }
                     </style>
                 </head>
                 <body>
@@ -796,7 +801,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     updateButtonStates(
                                         message.hasStagedChanges,
                                         message.hasUnstagedChanges,
-                                        message.hasUnpushedCommits
+                                        message.hasUnpushedCommits,
+                                        message.hasUnpulledCommits
                                     );
                                     updateRepositoryAndBranchLists(
                                         message.repositories,
@@ -827,20 +833,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         function updateButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
                             console.log('Button states:', { hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits }); // Debug log
-                            const commitBtn = document.getElementById('commitBtn');
+                            //const commitBtn = document.getElementById('commitBtn');
                             const commitMessage = document.getElementById('commitMessage');
-                            const pushBtn = document.getElementById('pushBtn');
+                            //const pushBtn = document.getElementById('pushBtn');
+                            //const pullBtn = document.getElementById('pullBtn');
                             
                             if (commitMessage) {
                                 commitMessage.disabled = !hasStagedChanges;
                             }
-                            if (commitBtn) {
-                                commitBtn.disabled = !hasStagedChanges && commitMessage && commitMessage.value.trim() === '';
-                            }
-                            if (pushBtn) {
-                                // Enable push button if there are unpushed commits
-                                pushBtn.disabled = !hasUnpushedCommits;
-                            }
+                            //if (commitBtn) {
+                            //    commitBtn.disabled = !hasStagedChanges && commitMessage && commitMessage.value.trim() === '';
+                            //    commitBtn.classList.toggle('has-updates', hasStagedChanges);
+                            //}
+                            //if (pushBtn) {
+                            //    // Highlight push button if there are unpushed commits
+                            //    //pushBtn.disabled = !hasUnpushedCommits;
+                            //    pushBtn.classList.toggle('has-updates', hasUnpushedCommits);
+                            //}
+                            //if (pullBtn) {
+                            //    pullBtn.classList.toggle('has-updates', hasUnpulledCommits);
+                            //}
                         }
 
                         function getFileName(fullpath) {
@@ -1387,7 +1399,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     currentBranch: '',
                     hasStagedChanges: false,
                     hasUnstagedChanges: false,
-                    hasUnpushedCommits: false
+                    hasUnpushedCommits: false,
+                    hasUnpulledCommits: false
                 });
                 return;
             }
@@ -1434,12 +1447,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }));
 
             const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
-
+            const hasUnpulledCommits = state.HEAD?.behind ? state.HEAD.behind > 0 : false;
             const allChanges = [...workingChanges, ...stagedChanges];
             
             // Get current branch from repository state
             const currentBranch = repo.state.HEAD?.name || '';
             console.log('Current branch:', currentBranch); // Debug log
+
+            // Update title bar buttons color
+            this.updateTitleBarGitButtons(hasUnpushedCommits, hasUnpulledCommits, stagedChanges);
 
             webview.postMessage({ 
                 type: 'gitChanges', 
@@ -1450,7 +1466,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 currentBranch: currentBranch,  // Use the current branch from repo state
                 hasStagedChanges: stagedChanges.length > 0,
                 hasUnstagedChanges: workingChanges.length > 0,
-                hasUnpushedCommits: hasUnpushedCommits
+                hasUnpushedCommits: hasUnpushedCommits,
+                hasUnpulledCommits: hasUnpulledCommits
             });
         } catch (error: any) {
             console.error('Error in getGitChanges:', error);
@@ -1462,6 +1479,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     
         // Setup file system watcher when repository is available
         this.setupFileSystemWatcher(webview);
+    }
+
+    // Update highlited state oftitle bar git buttons
+    private updateTitleBarGitButtons(hasUnpushedCommits: boolean, hasUnpulledCommits: boolean, stagedChanges: any) {
+        // Instead of trying to access webviewViews, just update the command contexts
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpushedChanges', hasUnpushedCommits);
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpulledChanges', hasUnpulledCommits);
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasStagedChanges', stagedChanges.length > 0);
     }
 
     private async getGitAPI(webview: vscode.Webview) {

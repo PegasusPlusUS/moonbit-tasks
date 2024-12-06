@@ -67,22 +67,38 @@
       {
         "command": "moonbit-tasks.fetch",
         "title": "Fetch",
-        "icon": "$(sync)"
+        "icon": {
+          "light": "$(sync)",
+          "dark": "$(sync)",
+          "themeColor": "moonbit-tasks.hasUnfetchedChanges ? gitDecoration.untrackedResourceForeground : null"
+        }
       },
       {
         "command": "moonbit-tasks.pull",
         "title": "Pull",
-        "icon": "$(arrow-down)"
+        "icon": {
+          "light": "$(arrow-down)",
+          "dark": "$(arrow-down)",
+          "themeColor": "moonbit-tasks.hasUnpulledChanges ? gitDecoration.untrackedResourceForeground : null"
+        }
       },
       {
         "command": "moonbit-tasks.commit",
         "title": "Commit",
-        "icon": "$(check)"
+        "icon": {
+          "light": "$(check)",
+          "dark": "$(check)",
+          "themeColor": "moonbit-tasks.hasStagedChanges ? gitDecoration.untrackedResourceForeground : null"
+        }
       },
       {
         "command": "moonbit-tasks.push",
         "title": "Push",
-        "icon": "$(cloud-upload)"
+        "icon": {
+          "light": "$(cloud-upload)",
+          "dark": "$(cloud-upload)",
+          "themeColor": "moonbit-tasks.hasUnpushedChanges ? gitDecoration.untrackedResourceForeground : null"
+        }
       }
     ],
     "menus": {
