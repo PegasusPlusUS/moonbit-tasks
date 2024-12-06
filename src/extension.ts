@@ -439,7 +439,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .section-header {
-                            padding: 4px 12px;
+                            padding: 2px 4px;
                             font-weight: bold;
                             color: var(--vscode-foreground);
                             background: var(--vscode-sideBar-background);
@@ -449,12 +449,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            gap: 5px;
+                            gap: 2px;
                         }
 
                         .section-header .file-actions {
                             display: flex;
-                            gap: 4px;
+                            gap: 2px;
                             visibility: hidden;
                         }
 
@@ -470,7 +470,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .file-item {
                             display: flex;
                             align-items: center;
-                            padding: 4px 12px;
+                            padding: 2px 6px;
                             position: relative;
                             cursor: default;
                             user-select: none;
@@ -842,8 +842,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     updateSmartTasksTreeView(message.items);
                                     break;
                                 case 'gitChanges':
-                                    updateFileTree(message.changes);
-                                    updateButtonStates(
+                                    updateGitChangesFileTree(message.changes);
+                                    updateGitButtonStates(
                                         message.hasStagedChanges,
                                         message.hasUnstagedChanges,
                                         message.hasUnpushedCommits,
@@ -876,28 +876,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'fetch' });
                         }
 
-                        function updateButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
-                            console.log('Button states:', { hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits }); // Debug log
-                            //const commitBtn = document.getElementById('commitBtn');
+                        function updateGitButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
                             const commitMessage = document.getElementById('commitMessage');
-                            //const pushBtn = document.getElementById('pushBtn');
-                            //const pullBtn = document.getElementById('pullBtn');
                             
                             if (commitMessage) {
                                 commitMessage.disabled = !hasStagedChanges;
                             }
-                            //if (commitBtn) {
-                            //    commitBtn.disabled = !hasStagedChanges && commitMessage && commitMessage.value.trim() === '';
-                            //    commitBtn.classList.toggle('has-updates', hasStagedChanges);
-                            //}
-                            //if (pushBtn) {
-                            //    // Highlight push button if there are unpushed commits
-                            //    //pushBtn.disabled = !hasUnpushedCommits;
-                            //    pushBtn.classList.toggle('has-updates', hasUnpushedCommits);
-                            //}
-                            //if (pullBtn) {
-                            //    pullBtn.classList.toggle('has-updates', hasUnpulledCommits);
-                            //}
                         }
 
                         function getFileName(fullpath) {
@@ -908,7 +892,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             return str.replace(/\\\\/g, '\\\\\\\\');
                         }
 
-                        function updateFileTree(changes) {
+                        function updateGitChangesFileTree(changes) {
                             const changesTree = document.getElementById('changesTree');
                             const stagedTree = document.getElementById('stagedTree');
                             const commitArea = document.querySelector('.commit-area');
@@ -936,7 +920,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     changesTree.style.display = 'none';
                                 }
                             }
-                            console.log('Changes header after update:', document.getElementById('changesHeader'));
 
                             // Handle Staged section visibility
                             const stagedHeader = document.getElementById('stagedHeader');
@@ -958,8 +941,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     commitArea.style.display = 'none';
                                 }
                             }
-                            console.log('Staged header after update:', document.getElementById('stagedHeader'));
-
+                                
                             // Render unstaged changes
                             changesTree.innerHTML = unstagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
@@ -1121,22 +1103,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             // Update branch list
                             if (branchSelect) {
-                                // First check if current branch exists in the list
-                                const branchExists = branches.some(branch => branch.name === currentBranch);
-                                
-                                branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
-                                    branches.map(branch => 
-                                        '<option value="' + branch.name + '" ' + 
-                                        (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
-                                        branch.name +
-                                        '</option>'
-                                    ).join('');
-
-                                // Add or remove the no-branch-selected class based on selection
-                                if (!branchExists) {
-                                    branchSelect.classList.add('no-branch-selected');
+                                if (repositories.length < 1) {
+                                    branchSelect.style.display = 'none';
                                 } else {
-                                    branchSelect.classList.remove('no-branch-selected');
+                                    // First check if current branch exists in the list
+                                    const branchExists = branches.some(branch => branch.name === currentBranch);
+                                    
+                                    branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
+                                        branches.map(branch => 
+                                            '<option value="' + branch.name + '" ' + 
+                                            (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
+                                            branch.name +
+                                            '</option>'
+                                        ).join('');
+
+                                    // Add or remove the no-branch-selected class based on selection
+                                    if (!branchExists) {
+                                        branchSelect.classList.add('no-branch-selected');
+                                    } else {
+                                        branchSelect.classList.remove('no-branch-selected');
+                                    }
                                 }
                             }
                         }
