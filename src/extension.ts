@@ -1522,13 +1522,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             const branches = refs
                 .filter((ref: any) => {
-                    // Include only local branches, excluding HEAD
-                    return ref.name && ref.name !== 'HEAD' && !ref.name.includes('/');
+                    // Include only local branches; exclude HEAD and remote branches
+                    return ref.name && ref.type === 'branch' && !ref.name.startsWith('refs/remotes/');
                 })
-                .map((branch: any) => ({
-                    name: branch.name || '',
-                    tooltip: branch.upstream ? `->${branch.upstream.name}` : 'No upstream branch'
-                }));
+                .map((branch: any) => {
+                    // Attempt to fetch upstream information
+                    const upstream = branch.upstream ? branch.upstream.name : null;
+
+                    return {
+                        name: branch.name || '',
+                        tooltip: upstream ? `-> ${upstream}` : 'No upstream branch',
+                    };
+                });
 
             //console.log('Processed branches:', branches); // Debug log
 

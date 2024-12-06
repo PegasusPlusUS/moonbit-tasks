@@ -301,3 +301,4 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - init refresh timing adjust
 
+- Fix upstream of branch info filter
