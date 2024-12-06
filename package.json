@@ -3,12 +3,15 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120614",
+  "version": "0.12.2024120604",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
   },
-  "repository": "https://github.com/pegasusplusus/moonbit-tasks.git",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pegasusplusus/moonbit-tasks.git"
+  },
   "categories": [
     "Other"
   ],

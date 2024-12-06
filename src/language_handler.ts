@@ -54,9 +54,9 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     
     let result = await asyncDetectProjectForDocumentOrDirectory(documentPathOrDir);
 
-    if (result == undefined || result.handler == undefined) {
+    if (result === undefined || result.handler === undefined) {
         smartTasksRootTitle = "Can't find signature of project";
-    } else if (undefined == result.handler.commands) {
+    } else if (undefined === result.handler.commands) {
         smartTasksRootTitle = "No commands found in signature";
     } else {
         smartCommandEntries = Array.from(result.handler.commands.entries());//.map(([command, shellcmd]) => ({command, shellcmd})));

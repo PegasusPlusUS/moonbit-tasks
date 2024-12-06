@@ -306,3 +306,5 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120604
 
 - Reuse terminal by name
+
+- Npm lint

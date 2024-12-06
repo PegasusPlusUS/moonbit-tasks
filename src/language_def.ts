@@ -3,7 +3,7 @@ import * as path from 'path';
 import { promises as fsPromises } from 'fs';
 import * as fs from 'fs';
 
-import * as helper from './helper'
+import * as helper from './helper';
 
 let configChangeListener: vscode.Disposable | undefined;
 let extensionContext: vscode.ExtensionContext | undefined; // Store context for later use
@@ -205,8 +205,16 @@ async function asyncInitLangDef() {
 			]))],
 			['Npm', new handlerInfo('package.json', new Map([
 				['Build', 'npm run compile'],
-				['Package', 'npm run compile && vsce.cmd package'],
-				['Publish', 'npm run compile && vsce.cmd publish']
+				['Rebuild', 'npm rebuild'],
+				['Lint', 'npm run lint'],
+				['Test', 'npm test'],
+				['CI', 'npm ci'],
+				['Install-test', 'npm install-test'],
+				['Install-ci-test', 'npm install-ci-test'],
+				['Update', 'npm update'],
+				['Npm-publish', 'npm publish'],
+				['VSCE-Package', 'vsce package'],
+				['VSCE-Publish', 'vsce publish']
 			]))],
 			['TypeScript', new handlerInfo('tsconfig.json', new Map([
 				['Build', 'tsc build'],
@@ -238,7 +246,7 @@ const fullFilePathNameLangDef = path.join(__dirname, fileNameLangDef);
 
 async function asyncLoadLangDefFromFile(): Promise<string> {
     try {
-        const jsonLangDef = await fsPromises.readFile(fullFilePathNameLangDef, 'utf8')
+        const jsonLangDef = await fsPromises.readFile(fullFilePathNameLangDef, 'utf8');
 		return jsonLangDef;
     } catch(e) {
 		if (!`${e}`.startsWith('Error: ENOENT')) {

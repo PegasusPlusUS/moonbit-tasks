@@ -10,7 +10,9 @@ import * as mbTaskExt from './language_handler';
 import * as smartTaskExt from './smart_tasks_panel_provider';
 
 import * as vscode from 'vscode';
-import * as child_process from 'child_process';
+import * as path from 'path';
+
+//import * as child_process from 'child_process';
 
 // Add this interface at the top of your file
 interface GitExtension {
@@ -38,10 +40,13 @@ const taskIconMap: { [key: string]: string } = {
     'run': 'codicon-play',               // Play button for run
     'package': 'codicon-archive',        // Archive/box for packaging
     'publish': 'codicon-cloud-upload',   // Cloud upload for publishing
+    'npm-publish': 'condicon-cloud-upload', // Npm publish
+    'vsce-publish': 'condicon-cloud-upload', // VSCE publish
     'coverage': 'codicon-shield',        // Shield for code coverage
     'gcov': 'codicon-graph',            // Graph for gcov
     'format': 'codicon-symbol-color',    // Color/format symbol
     'clean': 'codicon-trash',            // Trash can for clean
+    'lint': 'codicon-lightbulb',        // Lint
     'clippy': 'codicon-lightbulb',      // Clippy for smart tasks
     'benchmark': 'codicon-dashboard',        // Dashboard for benchmark
     'doc': 'codicon-book',              // Book for documentation
@@ -246,7 +251,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             try {
                                 await repo.checkout(data.branch);
-                                if (mbTaskExt.smartCommandEntries.length == 0) {
+                                if (mbTaskExt.smartCommandEntries.length === 0) {
                                     mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
                                 }
                                 this.getGitChanges(webviewView.webview);
@@ -361,7 +366,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     }
                                 }
                                 safeAsyncSwitch();
-                            }, 500);``
+                            }, 500);
                         }
                     } catch (error: any) {
                         webviewView.webview.postMessage({
@@ -802,7 +807,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- div class="smart-tasks-panel" -->
                             <div class="section-header">
                                 <span class="codicon codicon-tools"></span>
-                                <span>Project Tasks</span>
+                                <span id="projectNameSpan"></span>
+                                <span> Project Tasks</span>
                             </div>
                             <div id="smartTasksTreeView" class="tree-view">
                                 <!-- Smart Tasks tree items will be populated here -->
@@ -865,7 +871,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     gitCommit();
                                     break;
                                 case 'updateSmartTasksTree':
-                                    updateSmartTasksTreeView(message.items);
+                                    updateSmartTasksTreeView(message.projectName, message.items);
                                     break;
                                 case 'gitChanges':
                                     updateGitChangesFileTree(message.changes);
@@ -1062,7 +1068,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'getChanges' });
                         }
 
-                        function updateSmartTasksTreeView(items) {
+                        function updateSmartTasksTreeView(projectName, items) {
+                            const projectNameSpan = document.getElementById('projectNameSpan');
+                            if (projectNameSpan) {
+                                projectNameSpan.value = projectName;
+                            }
+
                             const treeView = document.getElementById('smartTasksTreeView');
                             if (!items || !Array.isArray(items)) {
                                 treeView.innerHTML = '';
@@ -1285,7 +1296,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
         // If there's no tasks detected, try detect git path
         if (currentRepoPath && currentRepoPath !== '') {
-            if (mbTaskExt.smartCommandEntries.length == 0) {
+            if (mbTaskExt.smartCommandEntries.length === 0) {
                 mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath);
             }
         }
@@ -1519,7 +1530,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 refs
                 .filter((ref: any) => {
                     // Include only local branches; exclude HEAD and remote branches
-                    return ref.name && ref.name != 'HEAD' && !(ref.name.includes('/') || ref.remote);
+                    return ref.name && ref.name !== 'HEAD' && !(ref.name.includes('/') || ref.remote);
                 })
                 .map(async (branch: any) => {
                     //console.log('branch:', branch); // Debug log
@@ -1633,11 +1644,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
     public updateSmartTasksTreeView(webview: vscode.Webview) {
         let treeItems;
-        if (mbTaskExt.smartCommandEntries.length == 0) {
+        let projectName = '';
+        if (mbTaskExt.smartCommandEntries.length === 0) {
             treeItems = [
                 { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
             ];
         } else {
+            projectName = path.basename(mbTaskExt.smartTasksDir);
             treeItems = mbTaskExt.smartCommandEntries.map(entry => ({
                 id: entry[1],
                 label: entry[0],
@@ -1648,6 +1661,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         //{ '🔍''⚙️''📁''🔧''📄' }
         webview.postMessage({
             type: 'updateSmartTasksTree',
+            projectName: projectName,
             items: treeItems
         });
     }

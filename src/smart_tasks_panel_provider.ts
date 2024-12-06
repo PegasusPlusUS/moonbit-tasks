@@ -102,7 +102,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 				const extensions = cmdHandler.signatureFilePattern.split('|');
 				for (let ext of extensions) {
 					found = (ext.length > 0) &&
-						((ext[0] != '*') ? cmdHandler.signatureFilePattern == basename
+						((ext[0] !== '*') ? cmdHandler.signatureFilePattern === basename
 						: basename.endsWith(ext.slice(1))
 					);
 
@@ -123,7 +123,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 			projectFound = checkSignature(documentPathOrDir);
 		}
 
-		if (projectFound == undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
+		if (projectFound === undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
 			const fileDir = stats.isFile() ? path.dirname(documentPathOrDir) : documentPathOrDir;  // Get the directory of the current file
 			projectFound = await searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
 		}
@@ -218,7 +218,7 @@ export async function asyncActiveDocumentChangesHandler(editor:any) {
 	if (editor) {
 		let documentPath = editor.document.uri.fsPath;
 		let documentDir = path.dirname(documentPath);
-		let refresh = lastActiveDocumentDir != documentDir;
+		let refresh = lastActiveDocumentDir !== documentDir;
 
 		// If path changes, rescan for project type
 		if (refresh) {
