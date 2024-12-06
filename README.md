@@ -283,6 +283,8 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 ### 0.12.2024120502
 
+- Fix view for staged changes
+
 - Icon for project tasks title
 
 - Icon for project tasks

@@ -215,22 +215,47 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'viewAllChanges':
                     console.log(`Opening all diffs for staged: ${data.isStaged}`);
-                    //const repo = await this.getCurrentRepository(webviewView.webview);
-                    //if (repo) {
+                    const repo = await this.getCurrentRepository(webviewView.webview);
+                    if (repo) {
                         try {
-                            const uris = data.files.map((filePath:string) => vscode.Uri.file(filePath));
-                            if (data.isStaged) {
-                                await vscode.commands.executeCommand('git.openIndexChange', ...uris);
-                            } else {
-                                await vscode.commands.executeCommand('git.openChange', ...uris);
+                            const resources = data.files.map((filePath: string) => {
+                                const uri = vscode.Uri.file(filePath);
+                                const originalRef = data.isStaged ? 'HEAD' : 'INDEX';
+                                const modifiedRef = data.isStaged ? 'INDEX' : '';
+
+                                return {
+                                    originalUri: toGitUri(uri, originalRef),
+                                    modifiedUri: modifiedRef ? toGitUri(uri, modifiedRef) : uri
+                                };
+                            });
+
+                            function toGitUri(uri: vscode.Uri, ref: string): vscode.Uri {
+                                const params = {
+                                    path: uri.fsPath,
+                                    ref
+                                };
+                                return uri.with({ 
+                                    scheme: 'git',
+                                    query: JSON.stringify(params)
+                                });
                             }
+
+                            const multiDiffSourceUri = vscode.Uri.file(repo.rootUri.path).with({ 
+                                scheme: 'git-changes'
+                            });
+
+                            vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
+                                multiDiffSourceUri,
+                                title: 'Git: ' + (data.isStaged ? 'Staged ' : '') + 'Changes',
+                                resources: resources
+                            });
                         } catch (error: any) {
                             webviewView.webview.postMessage({ 
                                 type: 'error', 
                                 message: 'Failed to open diffs: ' + (error.message || 'Unknown error')
                             });
                         }
-                    //}
+                    }
                     break;
                 case 'viewFileChanges':
                     console.log(`Opening diff for: ${data.filePath}, staged: ${data.isStaged}`);
@@ -247,7 +272,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             if (data.isStaged) {
                                 // Try to switch to staged version after a small delay
                                 setTimeout(async () => {
-                                    await vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
+                                    vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
                                 }, 500);
                             }
                         } catch (error: any) {
@@ -294,18 +319,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         return path;
     }
 
-    private async viewAllChanges(isStaged: boolean, webview: vscode.Webview) {
-        // TODO: Implement
-    }
-
-    private async viewFileChanges(filePath: string, isStaged: boolean, webview: vscode.Webview) {
-        console.log(`Opening diff for: ${filePath}, staged: ${isStaged}`);
-        const uri = vscode.Uri.file(filePath);
-        const leftUri = isStaged ? uri.with({ scheme: 'git', path: uri.path + '.staged' }) : uri.with({ scheme: 'git', path: uri.path + '.working' });
-        const rightUri = uri;
-        vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `Diff: ${filePath}`);
-    }
-
     private getFileIcon(extension: string): vscode.ThemeIcon {
         // Map file extensions to ThemeIcon IDs
         const iconMap: { [key: string]: string } = {
@@ -325,13 +338,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private _getHtmlContent(webview: vscode.Webview): string {
+        // Get path to codicons.css
+        const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(
+            this._extensionUri,
+            'node_modules',
+            '@vscode/codicons',
+            'dist',
+            'codicon.css'
+        ));
+
         // Get icon for .rs files
         const rustIcon = this.getFileIcon('.rs');
-        
+
         return `
             <!DOCTYPE html>
             <html>
                 <head>
+                    <link href="${codiconsUri}" rel="stylesheet" />
                     <style>
                         /* General layout styles */
                         .panel-container {
@@ -863,11 +886,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             changesTree.innerHTML = unstagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
                                 return \`
-                                    <div class="file-item" data-file="\${file.path}" onclick="openDiff('\${doubleEscape(file.path)}', false)">
+                                    <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)">
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Diff">🔍</button>
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Changes">🔍</button>
                                             <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
                                             <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
                                         </div>
@@ -879,11 +902,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             stagedTree.innerHTML = stagedChanges.map(file => {
                                 const fileName = getFileName(file.path);
                                 return \`
-                                    <div class="file-item" data-file="\${file.path}" onclick="openDiff('\${doubleEscape(file.path)}', true)">
+                                    <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)">
                                         <span class="file-name">\${fileName}</span>
                                         <div class="tooltip">\${file.path}</div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Diff">🔍</button>
+                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Changes">🔍</button>
                                             <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
                                         </div>
                                     </div>
@@ -1109,18 +1132,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     files: stagedFiles
                                 });
                             }
-                        }
-                        // Add console logs to verify element creation
-                        console.log('Changes header:', document.getElementById('changesHeader'));
-                        console.log('Staged header:', document.getElementById('stagedHeader'));
-
-                        // Function to open diff view
-                        function openDiff(filePath, isStaged) {
-                            console.log(\`Opening diff for: \${filePath}, staged: \${isStaged}\`);
-                            const uri = vscode.Uri.file(filePath);
-                            const leftUri = isStaged ? uri.with({ scheme: 'git', path: uri.path + '.staged' }) : uri.with({ scheme: 'git', path: uri.path + '.working' });
-                            const rightUri = uri;
-                            vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, \`Diff: \${filePath}\`);
                         }
 
                         function viewAllChanges(isStaged) {
