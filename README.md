@@ -285,6 +285,4 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Fix view for staged changes
 
-- Icon for project tasks title
-
-- Icon for project tasks
+- Git button shown depend on git state

@@ -67,20 +67,17 @@
       {
         "command": "moonbit-tasks.commit",
         "title": "Commit",
-        "icon": "$(check)",
-        "color": "#0078d4 when moonbit-tasks.hasStagedChanges"
+        "icon": "$(check)"
       },
       {
         "command": "moonbit-tasks.push",
         "title": "Push",
-        "icon": "$(cloud-upload)",
-        "color": "when moonbit-tasks.hasUnpushedChanges"
+        "icon": "$(cloud-upload)"
       },
       {
         "command": "moonbit-tasks.pull",
         "title": "Pull",
-        "icon": "$(arrow-down)",
-        "color": "when moonbit-tasks.hasUnpulledChanges"
+        "icon": "$(arrow-down)"
       },
       {
         "command": "moonbit-tasks.fetch",
@@ -92,22 +89,22 @@
       "view/title": [
         {
           "command": "moonbit-tasks.commit",
-          "when": "view == myGitTasksCustomView",
+          "when": "view == myGitTasksCustomView && moonbit-tasks.hasStagedChanges == true",
           "group": "navigation@1"
         },
         {
           "command": "moonbit-tasks.push",
-          "when": "view == myGitTasksCustomView",
+          "when": "view == myGitTasksCustomView && moonbit-tasks.hasUnpushedChanges == true",
           "group": "navigation@2"
         },
         {
           "command": "moonbit-tasks.pull",
-          "when": "view == myGitTasksCustomView",
+          "when": "view == myGitTasksCustomView && moonbit-tasks.hasUnpulledChanges == true",
           "group": "navigation@3"
         },
         {
           "command": "moonbit-tasks.fetch",
-          "when": "view == myGitTasksCustomView",
+          "when": "view == myGitTasksCustomView && moonbit-tasks.hasFetchable == true",
           "group": "navigation@4"
         }
       ]
