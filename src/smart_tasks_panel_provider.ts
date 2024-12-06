@@ -24,7 +24,7 @@ async function asyncSearchProjectAtDirectory(fileDir: string): Promise<langDef.h
 	async function asyncSearchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
 		try {
 			if (extensionExp.length > 0) {
-				if ('*' == extensionExp[0]) {
+				if ('*' === extensionExp[0]) {
 					extensionExp = extensionExp.slice(1);
 				}
 				let files = await fsPromises.readdir(folderPath);
