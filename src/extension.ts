@@ -635,6 +635,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             padding: 2px 0;
                         }
 
+                        .dropdown-container {
+                            display: flex;
+                            gap: 8px;
+                            align-items: center;
+                            flex: 1;  /* Take up available space */
+                        }
+
                         .select-control {
                             background: var(--vscode-dropdown-background);
                             color: var(--vscode-dropdown-foreground);
@@ -1111,7 +1118,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     
                                     branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
                                         branches.map(branch => 
-                                            '<option value="' + branch.name + '" ' + 
+                                            '<option value="' + branch.name + '" title="' + branch.tooltip + '"' + 
                                             (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
                                             branch.name +
                                             '</option>'
@@ -1418,19 +1425,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     hasFetchable: boolean = false;
-    // private async hasFetchableUpdates_DryRun(repoPath: string): Promise<void> {
-    //     return new Promise((resolve, reject) => {
-    //         child_process.exec('git fetch --dry-run', { cwd: repoPath }, (error, stdout) => {
-    //             if (error) {
-    //                 resolve(); // Resolve as false if there's an error
-    //             } else {
-    //                 this.hasFetchable = stdout.trim().length > 0;
-    //                 resolve();
-    //             }
-    //         });
-    //     });
-    // }
-
     private async hasFetchableUpdates(webview: vscode.Webview): Promise<void> {
         try {
             const repository = await this.getCurrentRepository(webview);
@@ -1488,13 +1482,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             const branches = refs
                 .filter((ref: any) => {
-                    // Include both local and remote branches, excluding HEAD
-                    return ref.name && ref.name !== 'HEAD';
+                    // Include only local branches, excluding HEAD
+                    return ref.name && ref.name !== 'HEAD' && !ref.name.includes('/');
                 })
                 .map((branch: any) => ({
                     name: branch.name || '',
-                    remote: branch.remote || false,
-                    upstream: branch.upstream?.name || ''
+                    tooltip: branch.upstream ? `->${branch.upstream.name}` : 'No upstream branch'
                 }));
 
             //console.log('Processed branches:', branches); // Debug log
