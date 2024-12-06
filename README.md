@@ -281,4 +281,8 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 -- Watch git root or current repo for file system changes to getGitChanges
 
+### 0.12.2024120502
 
+- Icon for project tasks title
+
+- Icon for project tasks

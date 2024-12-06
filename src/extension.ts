@@ -303,8 +303,29 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, `Diff: ${filePath}`);
     }
 
+    private getFileIcon(extension: string): vscode.ThemeIcon {
+        // Map file extensions to ThemeIcon IDs
+        const iconMap: { [key: string]: string } = {
+            '.rs': 'rust',
+            '.ts': 'typescript',
+            '.js': 'javascript',
+            '.py': 'python',
+            '.go': 'go',
+            '.java': 'java',
+            '.cpp': 'cpp',
+            '.c': 'c',
+            // Add more mappings as needed
+        };
+
+        const iconId = iconMap[extension] || 'file';
+        return new vscode.ThemeIcon(iconId);
+    }
+
     private _getHtmlContent(webview: vscode.Webview): string {
-        let htmlContent = `
+        // Get icon for .rs files
+        const rustIcon = this.getFileIcon('.rs');
+        
+        return `
             <!DOCTYPE html>
             <html>
                 <head>
@@ -336,6 +357,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
+                            gap: 5px;
                         }
 
                         .section-header .file-actions {
@@ -592,6 +614,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             background-color: var(--vscode-button-secondaryBackground);
                             color: var(--vscode-button-secondaryForeground);
                         }
+
+                        .file-icon {
+                            width: 16px;
+                            height: 16px;
+                        }
+                            
+                        .codicon {
+                            font-family: codicon;
+                            font-size: 16px;
+                            line-height: 16px;
+                        }
                     </style>
                 </head>
                 <body>
@@ -644,7 +677,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         <!-- Project Smart Tasks Tree View Panel -->
                         <!-- div class="smart-tasks-panel" -->
-                            <div class="section-header">Project Tasks</div>
+                            <div class="section-header">
+                                <i class="codicon codicon-\${rustIcon.id}"></i>
+                                <span>Project Tasks</span>
+                            </div>
                             <div id="smartTasksTreeView" class="tree-view">
                                 <!-- Smart Tasks tree items will be populated here -->
                             </div>
@@ -1108,13 +1144,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 </body>
             </html>
         `;
-        console.log('Begine HTML content:');
-        let lines = htmlContent.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-            console.log(lines[i]);
-        }
-        console.log('End HTML content:');
-        return htmlContent;
+        // console.log('Begine HTML content:');
+        // let lines = htmlContent.split('\n');
+        // for (let i = 0; i < lines.length; i++) {
+        //     console.log(lines[i]);
+        // }
+        // console.log('End HTML content:');
+        // return htmlContent;
     }
 
     // Git command implementations

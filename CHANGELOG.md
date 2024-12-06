@@ -201,3 +201,8 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 -- Watch git root or current repo for file system changes to getGitChanges
 
+## 0.12.2024120502
+
+- Icon for project tasks title
+
+- Icon for project tasks
