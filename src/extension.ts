@@ -492,7 +492,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .status-message {
                             position: fixed;
                             bottom: 20px;
-                            left: 40%;
+                            left: 50%;
                             transform: translateX(-50%);
                             padding: 8px 16px;
                             border-radius: 4px;
