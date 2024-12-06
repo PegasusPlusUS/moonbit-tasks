@@ -55,14 +55,6 @@ function stopWatchingLangDefChanges() {
 	fs.unwatchFile(fullFilePathNameLangDef);
 }
 
-export let gitDef: Map<string, string> = new Map([
-	['pull', 'git pull'],
-	['fetch', 'git fetch'],
-	['stage', 'git stage'],
-	['commit', 'git add .; git commit -m "${param}"'],
-	['commit|push', 'git add .; git commit -m "${param}"; git push'],
-]);
-
 /// Build-> Debug
 ///         Release
 ///                Fast
@@ -154,7 +146,7 @@ async function asyncInitLangDef() {
 				['Format', 'cargo fmt'],
 				['Clippy', 'cargo clippy'],
 				['Coverage','cargo tarpaulin'],
-				['GCov', 'cargo gcov'],
+				//['GCov', 'cargo gcov'],
 				['Benchmark', 'cargo bench'],
 				['Doc', 'cargo d'],
 				['Clean', 'cargo clean'],
