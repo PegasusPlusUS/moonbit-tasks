@@ -65,54 +65,28 @@
     },
     "commands": [
       {
-        "command": "moonbit-tasks.fetch",
-        "title": "Fetch",
-        "icon": {
-          "light": "$(sync)",
-          "dark": "$(sync)",
-          "themeColor": "moonbit-tasks.hasUnfetchedChanges ? gitDecoration.untrackedResourceForeground : null"
-        }
-      },
-      {
-        "command": "moonbit-tasks.pull",
-        "title": "Pull",
-        "icon": {
-          "light": "$(arrow-down)",
-          "dark": "$(arrow-down)",
-          "themeColor": "moonbit-tasks.hasUnpulledChanges ? gitDecoration.untrackedResourceForeground : null"
-        }
-      },
-      {
         "command": "moonbit-tasks.commit",
         "title": "Commit",
-        "icon": {
-          "light": "$(check)",
-          "dark": "$(check)",
-          "themeColor": "moonbit-tasks.hasStagedChanges ? gitDecoration.untrackedResourceForeground : null"
-        }
+        "icon": "$(check)"
       },
       {
         "command": "moonbit-tasks.push",
         "title": "Push",
-        "icon": {
-          "light": "$(cloud-upload)",
-          "dark": "$(cloud-upload)",
-          "themeColor": "moonbit-tasks.hasUnpushedChanges ? gitDecoration.untrackedResourceForeground : null"
-        }
+        "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "moonbit-tasks.pull",
+        "title": "Pull",
+        "icon": "$(arrow-down)"
+      },
+      {
+        "command": "moonbit-tasks.fetch",
+        "title": "Fetch",
+        "icon": "$(sync)"
       }
     ],
     "menus": {
       "view/title": [
-        {
-          "command": "moonbit-tasks.fetch",
-          "when": "view == myGitTasksCustomView",
-          "group": "navigation@4"
-        },
-        {
-          "command": "moonbit-tasks.pull",
-          "when": "view == myGitTasksCustomView",
-          "group": "navigation@3"
-        },
         {
           "command": "moonbit-tasks.commit",
           "when": "view == myGitTasksCustomView",
@@ -122,6 +96,16 @@
           "command": "moonbit-tasks.push",
           "when": "view == myGitTasksCustomView",
           "group": "navigation@2"
+        },
+        {
+          "command": "moonbit-tasks.pull",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "moonbit-tasks.fetch",
+          "when": "view == myGitTasksCustomView",
+          "group": "navigation@4"
         }
       ]
     }
