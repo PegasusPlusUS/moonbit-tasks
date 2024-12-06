@@ -155,9 +155,9 @@ async function asyncInitLangDef() {
 				['Upgrade', 'rustup upgrade'],
 			]))],
 			['Nim', new handlerInfo('*.nimble', new Map([
-				['run', 'nimble run'],
-				['fmt',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
-				["coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
+				['Run', 'nimble run'],
+				['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
+				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
 			]))],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([
 				['Build', 'cjpm build'],

@@ -1071,7 +1071,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateSmartTasksTreeView(projectName, items) {
                             const projectNameSpan = document.getElementById('projectNameSpan');
                             if (projectNameSpan) {
-                                projectNameSpan.value = projectName;
+                                projectNameSpan.innerHTML = projectName;
                             }
 
                             const treeView = document.getElementById('smartTasksTreeView');

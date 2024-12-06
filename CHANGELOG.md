@@ -228,3 +228,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Reuse terminal by name
 
 - Npm lint
+
+## 0.12.2024120605
+
+- Fix extension search slice processing.

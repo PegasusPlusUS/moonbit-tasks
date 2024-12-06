@@ -18,18 +18,23 @@ export class projectDef {
 }
 
 // Search project at designated directory
-async function searchProjectAtDirectory(fileDir: string): Promise<langDef.handlerInfo | undefined> {
+async function asyncSearchProjectAtDirectory(fileDir: string): Promise<langDef.handlerInfo | undefined> {
 	/// Just search files within a dir, no subdir yet
 	/// extensions can be written as '*.nimble' '*.json' '*.csproj'
-	async function searchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
+	async function asyncSearchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
 		try {
-			let files = await fsPromises.readdir(folderPath);
-			for (const file of files) {
-				if (file.endsWith(extensionExp)) {
-					const fullPath = path.join(folderPath, file);
-					const stats = await fsPromises.stat(fullPath); // stat() will follow symbolic link chain
-					if (stats.isFile()) {
-						return true;
+			if (extensionExp.length > 0) {
+				if ('*' == extensionExp[0]) {
+					extensionExp = extensionExp.slice(1);
+				}
+				let files = await fsPromises.readdir(folderPath);
+				for (const file of files) {
+					if (file.endsWith(extensionExp)) {
+						const fullPath = path.join(folderPath, file);
+						const stats = await fsPromises.stat(fullPath); // stat() will follow symbolic link chain
+						if (stats.isFile()) {
+							return true;
+						}
 					}
 				}
 			}
@@ -67,7 +72,7 @@ async function searchProjectAtDirectory(fileDir: string): Promise<langDef.handle
 								}
 							}
 							else {
-								fSigFileFound = await searchFilesByExtension(fileDir, signature);
+								fSigFileFound = await asyncSearchFilesByExtension(fileDir, signature);
 							}
 						}
 					}
@@ -125,7 +130,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 
 		if (projectFound === undefined || langDef.handlerInfo.notValid(projectFound.handler)) {
 			const fileDir = stats.isFile() ? path.dirname(documentPathOrDir) : documentPathOrDir;  // Get the directory of the current file
-			projectFound = await searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
+			projectFound = await asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
 		}
 	} catch (err) {
 		console.log(`Error occurred while searching project signature file: ${err}`);
@@ -133,12 +138,17 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 	return projectFound;
 }
 
-async function searchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) : Promise<projectDef> {
+async function asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) : Promise<projectDef> {
 	let handler: langDef.handlerInfo | undefined;
 	let projectDir: string | undefined;
 	let currentFolder = fileDir;
 	while (true) {
-		handler = await searchProjectAtDirectory(currentFolder);
+		try {
+			handler = await asyncSearchProjectAtDirectory(currentFolder);
+		} catch (err) {
+			console.error(`in search project at ${currentFolder}, ${err}`);
+		}
+
 		if (langDef.handlerInfo.isValid(handler)) {
 			projectDir = currentFolder;
 		}

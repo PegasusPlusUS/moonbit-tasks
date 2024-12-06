@@ -283,28 +283,32 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 ### 0.12.2024120502
 
-- Fix view for staged changes
+- Fix view for staged changes.
 
-- Git button shown depend on git state
+- Git button shown depend on git state.
 
 ### 0.12.2024120601
 
-- Fix icons for smart tasks tree view
+- Fix icons for smart tasks tree view.
 
 ### 0.12.2024120602
 
-- Add 'Benchmark' tasks
+- Add 'Benchmark' tasks.
 
 ### 0.12.2024120603
 
-- async error catching
+- async error catching.
 
-- init refresh timing adjust
+- init refresh timing adjust.
 
-- Fix upstream of branch info filter
+- Fix upstream of branch info filter.
 
 ### 0.12.2024120604
 
-- Reuse terminal by name
+- Reuse terminal by name.
 
-- Npm lint
+- Npm lint.
+
+### 0.12.2024120605
+
+- Fix extension search slice processing.
