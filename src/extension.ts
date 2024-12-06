@@ -30,13 +30,43 @@ interface GitRef {
     // ... other properties
 }
 
+// Map task types to appropriate codicons
+const taskIconMap: { [key: string]: string } = {
+    'build': 'codicon-package',          // Package/box icon for build
+    'test': 'codicon-beaker',            // Lab beaker for testing
+    'check': 'codicon-checklist',        // Checklist for verification
+    'run': 'codicon-play',               // Play button for run
+    'package': 'codicon-archive',        // Archive/box for packaging
+    'publish': 'codicon-cloud-upload',   // Cloud upload for publishing
+    'coverage': 'codicon-shield',        // Shield for code coverage
+    'format': 'codicon-symbol-color',    // Color/format symbol
+    'clean': 'codicon-trash',            // Trash can for clean
+    'default': 'codicon-gear'            // Default gear icon
+};
+
+// Helper function to get icon for a task
+function getTaskIcon(taskName: string): string {
+    // Convert task name to lowercase for case-insensitive matching
+    const normalizedTask = taskName.toLowerCase();
+
+    // Look for matching keywords in the task name
+    for (const [key, icon] of Object.entries(taskIconMap)) {
+        if (normalizedTask.includes(key)) {
+            return icon;
+        }
+    }
+
+    // Return default icon if no match found
+    return taskIconMap.default;
+}
+
 export function activate(context: vscode.ExtensionContext) {
     registerGitTasksWebview(context);
     mbTaskExt.active(context);
 }
 
 export function deactivate() {
-	mbTaskExt.deactivate();
+    mbTaskExt.deactivate();
 }
 
 function registerGitTasksWebview(context: vscode.ExtensionContext) {
@@ -77,7 +107,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
             }
         })
     );
-    
+
     // Register the command
     context.subscriptions.push(
         vscode.commands.registerCommand('moonbit-tasks.updateSmartTasksTreeView', () => {
@@ -91,7 +121,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
     // Register the tree item selected command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async(shellcmd: any, view:vscode.Webview) => {
+        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async (shellcmd: any, view: vscode.Webview) => {
             smartTaskExt.asyncSmartTaskRun(shellcmd, view);
         })
     );
@@ -107,7 +137,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         this.hasVisible = false;
     }
 
-    hasVisible : boolean;
+    hasVisible: boolean;
     hasHidden: boolean;
 
     public resolveWebviewView(
@@ -196,7 +226,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const currentRepoPath = await this.getCurrentRepositoryPath();
                             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
                             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
-                            
+
                             try {
                                 await repo.checkout(data.branch);
                                 // To do: track git root, refresh on change
@@ -224,12 +254,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 if (data.isStaged) {
                                     // For staged files: compare HEAD with INDEX
                                     return {
-                                        originalUri: uri.with({ 
+                                        originalUri: uri.with({
                                             scheme: 'git',
                                             path: `${uri.path}~`,
                                             query: JSON.stringify({ path: uri.fsPath, ref: 'HEAD' })
                                         }),
-                                        modifiedUri: uri.with({ 
+                                        modifiedUri: uri.with({
                                             scheme: 'git',
                                             query: JSON.stringify({ path: uri.fsPath, ref: 'INDEX' })
                                         })
@@ -237,7 +267,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 } else {
                                     // For unstaged files: compare INDEX with working tree
                                     return {
-                                        originalUri: uri.with({ 
+                                        originalUri: uri.with({
                                             scheme: 'git',
                                             path: `${uri.path}~`,
                                             query: JSON.stringify({ path: uri.fsPath, ref: 'INDEX' })
@@ -252,13 +282,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     path: uri.fsPath,
                                     ref
                                 };
-                                return uri.with({ 
+                                return uri.with({
                                     scheme: 'git',
                                     query: JSON.stringify(params)
                                 });
                             }
 
-                            const multiDiffSourceUri = vscode.Uri.file(repo.rootUri.path).with({ 
+                            const multiDiffSourceUri = vscode.Uri.file(repo.rootUri.path).with({
                                 scheme: 'git-changes'
                             });
 
@@ -272,8 +302,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 resources: resources
                             });
                         } catch (error: any) {
-                            webviewView.webview.postMessage({ 
-                                type: 'error', 
+                            webviewView.webview.postMessage({
+                                type: 'error',
                                 message: 'Failed to open diffs: ' + (error.message || 'Unknown error')
                             });
                         }
@@ -283,33 +313,33 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     console.log(`Opening diff for: ${data.filePath}, staged: ${data.isStaged}`);
                     //const repo = await this.getCurrentRepository(webviewView.webview);
                     //if (repo) {
-                        try {
-                            const filePath = data.filePath;
-                            const fileUri = vscode.Uri.file(filePath);
-                            
-                            // For both staged and unstaged files
-                            vscode.commands.executeCommand('git.openChange', fileUri);
+                    try {
+                        const filePath = data.filePath;
+                        const fileUri = vscode.Uri.file(filePath);
 
-                            // If it's staged, we need to switch to the staged version
-                            if (data.isStaged) {
-                                // Try to switch to staged version after a small delay
-                                setTimeout(async () => {
-                                    vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
-                                }, 500);
-                            }
-                        } catch (error: any) {
-                            webviewView.webview.postMessage({ 
-                                type: 'error', 
-                                message: 'Failed to open diff: ' + (error.message || 'Unknown error')
-                            });
+                        // For both staged and unstaged files
+                        vscode.commands.executeCommand('git.openChange', fileUri);
+
+                        // If it's staged, we need to switch to the staged version
+                        if (data.isStaged) {
+                            // Try to switch to staged version after a small delay
+                            setTimeout(async () => {
+                                vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
+                            }, 500);
                         }
+                    } catch (error: any) {
+                        webviewView.webview.postMessage({
+                            type: 'error',
+                            message: 'Failed to open diff: ' + (error.message || 'Unknown error')
+                        });
+                    }
                     //}
                     break;
             }
         });
 
         webviewView.webview.html = this._getHtmlContent(webviewView.webview);
-        
+
         this.updateSmartTasksTreeView(webviewView.webview);
         // Initialize by getting changes
         this.getGitChanges(webviewView.webview);
@@ -327,7 +357,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async getCurrentRepositoryPath() {
-        let path : string | undefined = undefined;
+        let path: string | undefined = undefined;
         try {
             path = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
         } catch (error: any) {
@@ -368,9 +398,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             'dist',
             'codicon.css'
         ));
-
-        // Get icon for .rs files
-        const rustIcon = this.getFileIcon('.rs');
 
         return `
             <!DOCTYPE html>
@@ -731,7 +758,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- Project Smart Tasks Tree View Panel -->
                         <!-- div class="smart-tasks-panel" -->
                             <div class="section-header">
-                                <i class="codicon codicon-\${rustIcon.id}"></i>
+                                <span class="codicon codicon-tools"></span>
                                 <span>Project Tasks</span>
                             </div>
                             <div id="smartTasksTreeView" class="tree-view">
@@ -1006,7 +1033,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const itemsHtml = items.map(function(item) {
                                 return \`
                                     <div class="tree-item" data-id="\${item.id}" onclick="selectSmartTasksTreeItem(this)">
-                                        <span class="tree-item-icon">\${item.icon || ''}</span>
+                                        <span class="codicon \${item.icon}"></span>
                                         <span class="tree-item-label">\${item.label}</span>
                                     </div>
                                 \`;
@@ -1226,19 +1253,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.pull();
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Pull successful'
                 });
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Pull failed: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1249,19 +1276,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.fetch();
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Fetch successful'
                 });
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Fetch failed: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1272,20 +1299,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.add(files);
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Files staged successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Failed to stage files: ' + files[0] + ' ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1296,20 +1323,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.revert(files);
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Changes unstaged successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Failed to unstage changes: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1320,20 +1347,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.clean(files);
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Changes discarded successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Failed to discard changes: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1344,20 +1371,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.commit(message);
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Changes committed successfully'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Commit failed: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
@@ -1368,26 +1395,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         if (repo) {
             try {
                 await repo.push();
-                webview.postMessage({ 
-                    type: 'info', 
+                webview.postMessage({
+                    type: 'info',
                     message: 'Push successful'
                 });
                 await this.getGitChanges(webview); // Refresh status
             } catch (error: any) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Push failed: ' + (error.message || 'Unknown error')
                 });
             }
         } else {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'No Git repository found'
             });
         }
     }
 
-    hasFetchable:boolean = false;
+    hasFetchable: boolean = false;
     // private async hasFetchableUpdates_DryRun(repoPath: string): Promise<void> {
     //     return new Promise((resolve, reject) => {
     //         child_process.exec('git fetch --dry-run', { cwd: repoPath }, (error, stdout) => {
@@ -1418,14 +1445,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             console.error('Error in hasFetchableUpdates:', error);
         }
     }
-    
+
     public async getGitChanges(webview: vscode.Webview) {
         try {
             const git = await this.getGitAPI(webview);
             if (!git?.repositories?.length) {
-                webview.postMessage({ 
-                    type: 'gitChanges', 
-                    changes: [], 
+                webview.postMessage({
+                    type: 'gitChanges',
+                    changes: [],
                     repositories: [],
                     branches: [],
                     currentRepo: '',
@@ -1449,7 +1476,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
-            
+
             this.hasFetchableUpdates(webview);
 
             // Use getRefs() instead of accessing state.refs directly
@@ -1474,7 +1501,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 status: change.status,
                 staged: false
             }));
-            
+
             const stagedChanges = state.indexChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
                 status: change.status,
@@ -1484,7 +1511,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
             const hasUnpulledCommits = state.HEAD?.behind ? state.HEAD.behind > 0 : false;
             const allChanges = [...workingChanges, ...stagedChanges];
-            
+
             // Get current branch from repository state
             const currentBranch = repo.state.HEAD?.name || '';
             //console.log('Current branch:', currentBranch); // Debug log
@@ -1495,8 +1522,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             // Setup file system watcher when repository is available
             this.watchFileSystemChangeForCurrentRepository(webview);
 
-            webview.postMessage({ 
-                type: 'gitChanges', 
+            webview.postMessage({
+                type: 'gitChanges',
                 changes: allChanges,
                 repositories: repositories,
                 branches: branches,
@@ -1509,11 +1536,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             });
         } catch (error: any) {
             console.error('Error in getGitChanges:', error);
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
             });
-        }    
+        }
     }
 
     // Update highlited state of title bar git buttons
@@ -1532,8 +1559,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         try {
             const extension = vscode.extensions.getExtension<GitExtension>('vscode.git');
             if (!extension) {
-                webview.postMessage({ 
-                    type: 'error', 
+                webview.postMessage({
+                    type: 'error',
                     message: 'Git extension not found'
                 });
                 return undefined;
@@ -1543,28 +1570,29 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const git = await gitExtension.getAPI(1);
             return git;
         } catch (error) {
-            webview.postMessage({ 
-                type: 'error', 
+            webview.postMessage({
+                type: 'error',
                 message: 'Failed to load Git extension'
             });
             return undefined;
         }
     }
 
-    public updateSmartTasksTreeView(webview: vscode.Webview) {
+    public updateSmartTasksTreeView_with_icon(webview: vscode.Webview) {
         let treeItems;
         if (mbTaskExt.smartCommandEntries.length == 0) {
             treeItems = [
-                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: '🔍' },
+                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
             ];
         } else {
-            treeItems = mbTaskExt.smartCommandEntries.map(entry=> ({ id: entry[1], label: entry[0], icon: '⚙️'}));
+            treeItems = mbTaskExt.smartCommandEntries.map(entry => ({
+                id: entry[1],
+                label: entry[0],
+                icon: getTaskIcon(entry[0])
+            }));
         }
-        // items = [
-        //     { id: '1', label: 'Build ', icon: '📁' },
-        //     { id: '2', label: 'Test ', icon: '🔧' },
-        //     { id: '3', label: 'Package', icon: '📄' }
-        // ];
+
+        //{ '🔍''⚙️''📁''🔧''📄' }
         webview.postMessage({
             type: 'updateSmartTasksTree',
             items: treeItems
