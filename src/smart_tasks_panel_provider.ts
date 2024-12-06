@@ -17,8 +17,6 @@ export class projectDef {
 	}
 }
 
-let myTerminal: vscode.Terminal | undefined;
-
 // Search project at designated directory
 async function searchProjectAtDirectory(fileDir: string): Promise<langDef.handlerInfo | undefined> {
 	/// Just search files within a dir, no subdir yet
@@ -171,10 +169,18 @@ export async function asyncSmartTaskRun(cmd: string, view:vscode.Webview) {
 	}
 }
 
+const MB_TERMINAL_NAME : string = 'Moonbit-tasks extension Terminal';
+let myTerminal: vscode.Terminal | undefined;
+
 async function asyncRunCmdInTerminal(cmd: string, cwd: string, view:vscode.Webview) {
 	if (!myTerminal || myTerminal.exitStatus) {
+		// Try find by name for ext reenable/reinstall
+		myTerminal = vscode.window.terminals.find((t) => t.name === MB_TERMINAL_NAME);
+	}
+	
+	if (!myTerminal || myTerminal.exitStatus) {
 		myTerminal = vscode.window.createTerminal({
-			name:'Moonbit-tasks extension Terminal',
+			name: MB_TERMINAL_NAME,
 			shellPath: await helper.asyncGetShellPath(),
 			iconPath:new vscode.ThemeIcon('tools')
 		});

@@ -302,3 +302,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 - init refresh timing adjust
 
 - Fix upstream of branch info filter
+
+### 0.12.2024120604
+
+- Reuse terminal by name

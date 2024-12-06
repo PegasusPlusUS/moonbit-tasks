@@ -2,7 +2,7 @@
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
     if (!warning.message.includes('Buffer() is deprecated')) {
-        console.log(warning.stack);
+        console.warn(warning.stack);
     }
 });
 
@@ -246,23 +246,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                             try {
                                 await repo.checkout(data.branch);
-                                // To do: track git root, refresh on change
                                 if (mbTaskExt.smartCommandEntries.length == 0) {
-                                    console.log("asyncRefresh " + data.path);
                                     mbTaskExt.asyncRefereshSmartTasksDataProvider(data.path);
                                 }
                                 this.getGitChanges(webviewView.webview);
                             } catch (error: any) {
                                 webviewView.webview.postMessage({
                                     type: 'error',
-                                    message: 'Failed to switch branch: ' + (error.message || 'Unknown error')
+                                    message: 'Failed to switch branch, checking changes? : ' + (error.message || 'Unknown error')
                                 });
                             }
                         }
                     }
                     break;
                 case 'viewAllChanges':
-                    console.log(`Opening all diffs for staged: ${data.isStaged}`);
                     const repo = await this.getCurrentRepository(webviewView.webview);
                     if (repo) {
                         try {
@@ -322,7 +319,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                         resources: resources
                                     });
                                 } catch (error) {
-                                    console.log(`Error while execute '_workbench.openMultiDiffEditor': ${error}`);
+                                    console.error(`Error while execute '_workbench.openMultiDiffEditor': ${error}`);
                                 }
                             }
                             safeAsyncExec();
@@ -347,7 +344,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             try {
                                 await  vscode.commands.executeCommand('git.openChange', fileUri);
                             } catch (error) {
-                                console.log(`Error while executeCommand 'git.openChange', ${error}`);
+                                console.error(`executeCommand 'git.openChange', ${error}`);
                             }
                         }
                         safeAsyncOpenChange();
@@ -360,7 +357,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     try {
                                         await vscode.commands.executeCommand('workbench.action.compareEditor.switchToSecondary');
                                     } catch (error) {
-                                        console.log(`Error while executing vscode.commands 'workbench.action.compareEditor.switchToSecondary', ${error}`);
+                                        console.error(`executing vscode.commands 'workbench.action.compareEditor.switchToSecondary', ${error}`);
                                     }
                                 }
                                 safeAsyncSwitch();
@@ -1246,7 +1243,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function viewAllChanges(isStaged) {
-                            console.log(\`Sending viewAllChanges message for staged: \${isStaged}\`);
                             const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
                                 .map(item => item.getAttribute('data-file'));
                             
@@ -1258,7 +1254,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function viewFileChanges(filePath, isStaged) {
-                            console.log(\`Sending viewFileChanges message for: \${filePath}, staged: \${isStaged}\`);
                             vscode.postMessage({
                                 command: 'viewFileChanges',
                                 filePath: filePath,
@@ -1518,21 +1513,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            console.log('Refs:', refs); // Debug log
+            //console.log('Refs:', refs); // Debug log
 
-            const branches = refs
+            const branches = await Promise.all(
+                refs
                 .filter((ref: any) => {
                     // Include only local branches; exclude HEAD and remote branches
                     return ref.name && ref.name != 'HEAD' && !(ref.name.includes('/') || ref.remote);
                 })
                 .map(async (branch: any) => {
+                    //console.log('branch:', branch); // Debug log
                     // Attempt to fetch upstream information
-                    const branchName = branch.name || '';
+                    const branchName = branch.name ? branch.name : '';
                     let upstream = null;
         
                     try {
                         // Fetch branch details for upstream info
                         const branchDetails = await repo.getBranch(branchName);
+                        //console.log('branch detail:', branchDetails); // Debug log
                         if (branchDetails.upstream) {
                             upstream = branchDetails.upstream.remote + '/' + branchDetails.upstream.name;
                         }
@@ -1540,11 +1538,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         console.warn(`Failed to get upstream for branch ${branchName}:`, err);
                     }
         
+                    //console.log(`banchName: ${branchName}, upstream: ${upstream} `); // Debug log
+
                     return {
                         name: branchName,
                         tooltip: upstream ? `-> ${upstream}` : 'No upstream branch',
                     };
-                });
+                })
+            );
 
             //console.log('Processed branches:', branches); // Debug log
 

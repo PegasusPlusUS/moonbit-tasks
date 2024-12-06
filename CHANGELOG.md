@@ -210,3 +210,19 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ## 0.12.2024120601
 
 - Fix icons for smart tasks tree view
+
+## 0.12.2024120602
+
+- Add 'Benchmark' tasks
+
+## 0.12.2024120603
+
+- async error catching
+
+- init refresh timing adjust
+
+- Fix upstream of branch info filter
+
+## 0.12.2024120604
+
+- Reuse terminal by name
