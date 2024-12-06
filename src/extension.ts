@@ -220,13 +220,30 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         try {
                             const resources = data.files.map((filePath: string) => {
                                 const uri = vscode.Uri.file(filePath);
-                                const originalRef = data.isStaged ? 'HEAD' : 'INDEX';
-                                const modifiedRef = data.isStaged ? 'INDEX' : '';
-
-                                return {
-                                    originalUri: toGitUri(uri, originalRef),
-                                    modifiedUri: modifiedRef ? toGitUri(uri, modifiedRef) : uri
-                                };
+                                if (data.isStaged) {
+                                    // For staged files: compare HEAD with INDEX
+                                    return {
+                                        originalUri: uri.with({ 
+                                            scheme: 'git',
+                                            path: `${uri.path}~`,
+                                            query: JSON.stringify({ path: uri.fsPath, ref: 'HEAD' })
+                                        }),
+                                        modifiedUri: uri.with({ 
+                                            scheme: 'git',
+                                            query: JSON.stringify({ path: uri.fsPath, ref: 'INDEX' })
+                                        })
+                                    };
+                                } else {
+                                    // For unstaged files: compare INDEX with working tree
+                                    return {
+                                        originalUri: uri.with({ 
+                                            scheme: 'git',
+                                            path: `${uri.path}~`,
+                                            query: JSON.stringify({ path: uri.fsPath, ref: 'INDEX' })
+                                        }),
+                                        modifiedUri: uri
+                                    };
+                                }
                             });
 
                             function toGitUri(uri: vscode.Uri, ref: string): vscode.Uri {
@@ -244,6 +261,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 scheme: 'git-changes'
                             });
 
+                            console.log(`Opening multi diff editor for: ${multiDiffSourceUri}, ${resources}`);
+                            for (const resource of resources) {
+                                console.log(`Resource: ${resource.originalUri}, ${resource.modifiedUri}`);
+                            }
                             vscode.commands.executeCommand('_workbench.openMultiDiffEditor', {
                                 multiDiffSourceUri,
                                 title: 'Git: ' + (data.isStaged ? 'Staged ' : '') + 'Changes',
