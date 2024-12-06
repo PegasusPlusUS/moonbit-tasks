@@ -10,6 +10,7 @@ import * as mbTaskExt from './language_handler';
 import * as smartTaskExt from './smart_tasks_panel_provider';
 
 import * as vscode from 'vscode';
+import * as child_process from 'child_process';
 
 // Add this interface at the top of your file
 interface GitExtension {
@@ -1386,6 +1387,38 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    hasFetchable:boolean = false;
+    // private async hasFetchableUpdates_DryRun(repoPath: string): Promise<void> {
+    //     return new Promise((resolve, reject) => {
+    //         child_process.exec('git fetch --dry-run', { cwd: repoPath }, (error, stdout) => {
+    //             if (error) {
+    //                 resolve(); // Resolve as false if there's an error
+    //             } else {
+    //                 this.hasFetchable = stdout.trim().length > 0;
+    //                 resolve();
+    //             }
+    //         });
+    //     });
+    // }
+
+    private async hasFetchableUpdates(webview: vscode.Webview): Promise<void> {
+        try {
+            const repository = await this.getCurrentRepository(webview);
+
+            if (repository) {
+                // Check remote refs to see if any updates are available
+                const refs = await repository.getRefs();
+                const remoteRefs = refs.filter((ref: any) => ref.remote);
+                this.hasFetchable = remoteRefs.some((ref: any) => {
+                    const localRef = refs.find((local: any) => local.name === ref.name.replace(/^origin\//, ''));
+                    return !localRef || (ref.commit && ref.commit !== localRef.commit);
+                });
+            }
+        } catch (error: any) {
+            console.error('Error in hasFetchableUpdates:', error);
+        }
+    }
+    
     public async getGitChanges(webview: vscode.Webview) {
         try {
             const git = await this.getGitAPI(webview);
@@ -1416,10 +1449,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
+            
+            this.hasFetchableUpdates(webview);
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            console.log('Refs:', refs); // Debug log
+            //console.log('Refs:', refs); // Debug log
 
             const branches = refs
                 .filter((ref: any) => {
@@ -1432,7 +1467,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     upstream: branch.upstream?.name || ''
                 }));
 
-            console.log('Processed branches:', branches); // Debug log
+            //console.log('Processed branches:', branches); // Debug log
 
             const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
                 path: change.uri.fsPath,
@@ -1452,10 +1487,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             
             // Get current branch from repository state
             const currentBranch = repo.state.HEAD?.name || '';
-            console.log('Current branch:', currentBranch); // Debug log
+            //console.log('Current branch:', currentBranch); // Debug log
 
             // Update title bar buttons color
             this.updateTitleBarGitButtons(hasUnpushedCommits, hasUnpulledCommits, stagedChanges);
+
+            // Setup file system watcher when repository is available
+            this.watchFileSystemChangeForCurrentRepository(webview);
 
             webview.postMessage({ 
                 type: 'gitChanges', 
@@ -1475,18 +1513,19 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 type: 'error', 
                 message: 'Failed to get Git changes: ' + (error.message || 'Unknown error')
             });
-        }
-    
-        // Setup file system watcher when repository is available
-        this.setupFileSystemWatcher(webview);
+        }    
     }
 
-    // Update highlited state oftitle bar git buttons
+    // Update highlited state of title bar git buttons
     private updateTitleBarGitButtons(hasUnpushedCommits: boolean, hasUnpulledCommits: boolean, stagedChanges: any) {
         // Instead of trying to access webviewViews, just update the command contexts
+        const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+        console.log(`[${timestamp}] Git: unpushed=${hasUnpushedCommits}, unpulled=${hasUnpulledCommits}, staged=${stagedChanges.length > 0}, unfetchable=${this.hasFetchable}`);
+
         vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpushedChanges', hasUnpushedCommits);
         vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpulledChanges', hasUnpulledCommits);
         vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasStagedChanges', stagedChanges.length > 0);
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasFetchable', this.hasFetchable);
     }
 
     private async getGitAPI(webview: vscode.Webview) {
@@ -1532,7 +1571,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async setupFileSystemWatcher(webview: vscode.Webview) {
+    private async watchFileSystemChangeForCurrentRepository(webview: vscode.Webview) {
         const repo = await this.getCurrentRepository(webview);
         if (repo && repo.rootUri) {
             // Dispose existing watcher if any

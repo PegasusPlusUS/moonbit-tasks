@@ -67,17 +67,20 @@
       {
         "command": "moonbit-tasks.commit",
         "title": "Commit",
-        "icon": "$(check)"
+        "icon": "$(check)",
+        "color": "#0078d4 when moonbit-tasks.hasStagedChanges"
       },
       {
         "command": "moonbit-tasks.push",
         "title": "Push",
-        "icon": "$(cloud-upload)"
+        "icon": "$(cloud-upload)",
+        "color": "when moonbit-tasks.hasUnpushedChanges"
       },
       {
         "command": "moonbit-tasks.pull",
         "title": "Pull",
-        "icon": "$(arrow-down)"
+        "icon": "$(arrow-down)",
+        "color": "when moonbit-tasks.hasUnpulledChanges"
       },
       {
         "command": "moonbit-tasks.fetch",
