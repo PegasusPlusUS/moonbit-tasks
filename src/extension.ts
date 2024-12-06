@@ -41,6 +41,21 @@ const taskIconMap: { [key: string]: string } = {
     'coverage': 'codicon-shield',        // Shield for code coverage
     'format': 'codicon-symbol-color',    // Color/format symbol
     'clean': 'codicon-trash',            // Trash can for clean
+    'clippy': 'codicon-lightbulb',      // Clippy for smart tasks
+    'doc': 'codicon-book',              // Book for documentation
+    'update': 'codicon-sync',           // Sync for update
+    'upgrade': 'codicon-sync',           // Upgrade for upgrade
+    'debug': 'codicon-debug',      // Debug icon
+    'rocket': 'codicon-rocket',         // Rocket for launch
+    'verified': 'codicon-verified',     // Verified icon
+    'tools': 'codicon-tools',           // Tools icon
+    'symbol-color': 'codicon-symbol-color', // Symbol color icon
+    'symbol-method': 'codicon-symbol-method', // Symbol method icon
+    'terminal': 'codicon-terminal',         // Terminal icon
+    'output': 'codicon-output',           // Output icon
+    'file-code': 'codicon-file-code',     // File code icon
+    'account': 'codicon-account',      // Account icon
+    'calendar': 'codicon-calendar',     // Calendar icon
     'default': 'codicon-gear'            // Default gear icon
 };
 
@@ -1578,7 +1593,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    public updateSmartTasksTreeView_with_icon(webview: vscode.Webview) {
+    public updateSmartTasksTreeView(webview: vscode.Webview) {
         let treeItems;
         if (mbTaskExt.smartCommandEntries.length == 0) {
             treeItems = [

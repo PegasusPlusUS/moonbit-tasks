@@ -286,3 +286,9 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 - Fix view for staged changes
 
 - Git button shown depend on git state
+
+### 0.12.2024120601
+
+- Fix icons for smart tasks tree view
+
+
