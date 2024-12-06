@@ -291,4 +291,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Fix icons for smart tasks tree view
 
+### 0.12.2024120602
+
+- Add 'Benchmark' tasks
 

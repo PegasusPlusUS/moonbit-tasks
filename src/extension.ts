@@ -630,9 +630,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         .header-controls {
                             display: flex;
-                            gap: 8px;
+                            gap: 4px;
                             align-items: center;
-                            padding: 4px 0;
+                            padding: 2px 0;
                         }
 
                         .select-control {
@@ -642,7 +642,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             padding: 2px 4px;
                             border-radius: 2px;
                             font-size: 12px;
-                            min-width: 120px;
+                            min-width: 60px;
                         }
 
                         /* Add styles for unselected branch state */
