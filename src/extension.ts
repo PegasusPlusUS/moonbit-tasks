@@ -1511,7 +1511,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             // Get all repositories
             const repositories = git.repositories.map((r: any) => ({
                 name: r.rootUri.path.split('/').pop() || r.rootUri.path,
-                path: r.rootUri.path
+                path: mbTaskExt.convertGitPathForWindowsPath(r.rootUri.path)
             }));
 
             // Find the current repository based on the selected path

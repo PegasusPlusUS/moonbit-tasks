@@ -316,3 +316,5 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120606
 
 - Show repository selector even only one.
+
+- repo root path format convention for windows.
