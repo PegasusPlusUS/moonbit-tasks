@@ -43,7 +43,7 @@ const taskIconMap: { [key: string]: string } = {
     'format': 'codicon-symbol-color',    // Color/format symbol
     'clean': 'codicon-trash',            // Trash can for clean
     'clippy': 'codicon-lightbulb',      // Clippy for smart tasks
-    'benchmark': 'codicon-graph',        // Benchmark icon
+    'benchmark': 'codicon-dashboard',        // Dashboard for benchmark
     'doc': 'codicon-book',              // Book for documentation
     'update': 'codicon-sync',           // Sync for update
     'upgrade': 'codicon-rocket',           // Upgrade for upgrade
