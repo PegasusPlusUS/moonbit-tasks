@@ -79,10 +79,12 @@ function stopWatchingLangDefChanges() {
 export class handlerInfo {
 	signatureFilePattern: string;
 	commands: Map<string, string>;
-	
-	constructor(sigFileName: string, commands: Map<string, string>) {
+	icon: string;
+
+	constructor(sigFileName: string, commands: Map<string, string>, icon: string = "") {
 		this.signatureFilePattern = sigFileName;
 		this.commands = commands;
+		this.icon = icon;
 	}
 
 	static isValid(h: handlerInfo | undefined): boolean {
@@ -137,7 +139,7 @@ async function asyncInitLangDef() {
 				['Publish', 'moon publish'],
 				['Update', 'moon update'],
 				['Upgrade', 'moon upgrade'],
-			]))],
+			]), 'extension-icon.png')],
 			['Rust', new handlerInfo('Cargo.toml', new Map([
 				['Build', 'cargo b'],
 				['Check', 'cargo c'],
@@ -153,12 +155,12 @@ async function asyncInitLangDef() {
 				['Update', 'cargo update'],
 				['Publish', 'cargo publish'],
 				['Upgrade', 'rustup upgrade'],
-			]))],
+			]), 'file_type_rust_toolchain.svg')],
 			['Nim', new handlerInfo('*.nimble', new Map([
 				['Run', 'nimble run'],
 				['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
 				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
-			]))],
+			]), 'file_type_nim.svg')],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([
 				['Build', 'cjpm build'],
 				['Check', 'cjpm check'],
@@ -166,12 +168,12 @@ async function asyncInitLangDef() {
 				['Test', 'cjpm test'],
 				['Bench', 'cjpm bench'],
 				['Clean', 'cjpm clean'],
-			]))],
+			]), 'file_type_xcode.svg')],
 			['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
 				['Build', 'zig build'],
 				['Run', 'zig build run'],
 				['Test', 'zig build test'],
-			]))],
+			]), 'file_type_zig.svg')],
 			['Gleam', new handlerInfo('gleam.toml', new Map([
 				['Build', 'gleam build'],
 				['Run', 'gleam run'],
@@ -183,7 +185,7 @@ async function asyncInitLangDef() {
 				['Publish', 'gleam publish'],
 				['Update', 'gleam update'],
 				['Shell', 'gleam shell'],
-			]))],
+			]), 'file_type_gleam.svg')],
 			['Go', new handlerInfo('go.mod', new Map([
 				['Build', 'go build'],
 				['Run', 'go run'],
@@ -192,17 +194,17 @@ async function asyncInitLangDef() {
 				['Clean', 'go clean'],
 				['Fix', 'go fix'],
 				['Format', 'go format'],
-			]))],
+			]), 'file_type_go_fuchsia.svg')],
 			['Wa', new handlerInfo('wa.mod', new Map([
 				['Build', 'wa build'],
 				['Run', 'wa run'],
 				['Test', 'wa test'],
-			]))],
+			]), 'file_type_wasm.svg')],
 			['Java', new handlerInfo('pom.xml', new Map([
 				['Build', 'mvn compile'],
 				['Run', 'mvn run'],
 				['Test', 'mvn test'],
-			]))],
+			]), 'file_type_java.svg')],
 			['Npm', new handlerInfo('package.json', new Map([
 				['Build', 'npm run compile'],
 				['Rebuild', 'npm rebuild'],
@@ -215,22 +217,22 @@ async function asyncInitLangDef() {
 				['Npm-publish', 'npm publish'],
 				['VSCE-Package', 'vsce package'],
 				['VSCE-Publish', 'vsce publish']
-			]))],
+			]), 'file_type_npm.svg')],
 			['TypeScript', new handlerInfo('tsconfig.json', new Map([
 				['Build', 'tsc build'],
 				['Run', 'tsc run'],
 				['Test', 'tsc test']
-			]))],
+			]), 'file_type_typescript_official.svg')],
 			['Swift', new handlerInfo('Package.swift', new Map([
 				['Build', 'swift build'],
 				['Run', 'swift run'],
 				['Test', 'swift test']
-			]))],
+			]), 'file_type_swift.svg')],
 			['C/C++/CMake', new handlerInfo('CMakeLists.txt', new Map([
 				['Build', 'cmake -S . -B .build && cmake --build .build'],
 				['Test', 'cmake --build .build && ctest --test-dir .build'],
 				['Run', 'cmake --build .build && ctest --test-dir .build && cmake run run']
-			]))]
+			]), 'folder_type_cmake.svg')]
 		]);
 
 		myMap.forEach((value, key) => {

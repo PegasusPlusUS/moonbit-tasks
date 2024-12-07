@@ -440,6 +440,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             'codicon.css'
         ));
 
+        // Get path to your SVG icon
+        const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(
+            this._extensionUri,
+            'images',
+            'file_type_rust_toolchain.svg'
+        ));
+
         return `
             <!DOCTYPE html>
             <html>
@@ -652,6 +659,27 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             justify-content: space-between;
                         }
 
+                        .header-icon-fixed {
+                            width: 24px;          /* Set explicit width */
+                            height: 24px;         /* Set explicit height */
+                            margin-right: 8px;    /* Space between icon and text */
+                            vertical-align: middle; /* Align with text */
+                        }
+
+                        /* Or if you want to make it responsive */
+                        .header-icon {
+                            width: 1.5em;         /* Relative to font size */
+                            height: 1.5em;
+                            margin-right: 0.5em;
+                        }
+
+                        /* If you need to preserve aspect ratio */
+                        .header-icon-adaptive {
+                            width: 24px;
+                            height: auto;         /* Maintain aspect ratio */
+                            max-height: 24px;     /* Prevent too tall */
+                        }
+
                         .header-controls {
                             display: flex;
                             gap: 4px;
@@ -806,7 +834,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- Project Smart Tasks Tree View Panel -->
                         <!-- div class="smart-tasks-panel" -->
                             <div class="section-header">
-                                <span class="codicon codicon-tools"></span>
+                                <img class="header-icon" src="${iconUri}" alt="Project Tasks"/>
                                 <span id="projectNameSpan"></span>
                                 <span> Project Tasks</span>
                             </div>

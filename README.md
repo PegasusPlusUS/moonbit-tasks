@@ -318,3 +318,8 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 - Show repository selector even only one.
 
 - repo root path format convention for windows.
+
+### 0.12.2024120607
+
+- Icon for Project Tasks.
+
