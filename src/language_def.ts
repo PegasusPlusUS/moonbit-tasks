@@ -160,7 +160,7 @@ async function asyncInitLangDef() {
 				['Run', 'nimble run'],
 				['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
 				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
-			]), 'file_type_nim.svg')],
+			]), 'file_type_nimble.svg')],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([
 				['Build', 'cjpm build'],
 				['Check', 'cjpm check'],
