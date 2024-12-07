@@ -920,6 +920,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }, type === 'error' ? 5000 : 3000); // Show errors longer than info messages
                         }
 
+                        let smartTaskTreeUpdated = false;
+
                         // Update the message handler
                         window.addEventListener('message', event => {
                             const message = event.data;
@@ -928,6 +930,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     gitCommit();
                                     break;
                                 case 'updateSmartTasksTree':
+                                    smartTaskTreeUpdated = true;
                                     updateSmartTasksTreeView(message.projectName, message.iconUri, message.items);
                                     break;
                                 case 'gitChanges':
@@ -1073,9 +1076,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                                 console.log(\`Setting up auto-refresh interval \${delay}ms\`);
                                 intervalID = setInterval(() => {
-                                    // if git branch init OK, reduce interval to 60s
+                                    // if smartTaskTreeView updated and git branch init OK, reduce interval to 60s
                                     const branchSelect = document.getElementById('branchSelect');
-                                    if (branchSelect && branchSelect.style.display != 'none') {
+                                    if (smartTaskTreeUpdated && branchSelect && branchSelect.style.display != 'none') {
                                         startInterval(60000);
                                     }
 
@@ -1651,7 +1654,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             this.watchFileSystemChangeForCurrentRepository(webview);
 
             this.updateSmartTasksTreeView(webview);
-            
+
             webview.postMessage({
                 type: 'gitChanges',
                 changes: allChanges,
