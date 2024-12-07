@@ -158,7 +158,10 @@ async function asyncInitLangDef() {
 			]), 'file_type_rust_toolchain.svg')],
 			['Nim', new handlerInfo('*.nimble', new Map([
 				['Run', 'nimble run'],
-				['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
+				// CMD
+				// ['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
+				// Bash
+				['Format', "find . -type f -name '*.nim' -exec nimpretty --backup:off {} \;"],
 				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
 			]), 'file_type_nimble.svg')],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([

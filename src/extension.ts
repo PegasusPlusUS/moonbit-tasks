@@ -97,7 +97,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
 
     // Register the commands for the title bar buttons
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.commit', async () => {
+        vscode.commands.registerCommand('moonbit-tasks.git.commit', async () => {
             if (gitTasksProvider._webview) {
                 // Post a message to webview to get the commit message
                 gitTasksProvider._webview.postMessage({ type: 'getCommitMessage' });
@@ -106,7 +106,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.push', async () => {
+        vscode.commands.registerCommand('moonbit-tasks.git.push', async () => {
             if (gitTasksProvider._webview) {
                 await gitTasksProvider.gitPush(gitTasksProvider._webview);
             }
@@ -114,7 +114,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.pull', async () => {
+        vscode.commands.registerCommand('moonbit-tasks.git.pull', async () => {
             if (gitTasksProvider._webview) {
                 await gitTasksProvider.gitPull(gitTasksProvider._webview);
             }
@@ -122,7 +122,7 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.fetch', async () => {
+        vscode.commands.registerCommand('moonbit-tasks.git.fetch', async () => {
             if (gitTasksProvider._webview) {
                 await gitTasksProvider.gitFetch(gitTasksProvider._webview);
                 await gitTasksProvider.getGitChanges(gitTasksProvider._webview);
@@ -147,6 +147,35 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
             smartTaskExt.asyncSmartTaskRun(shellcmd, view);
         })
     );
+
+    function registerContextMenu(context: vscode.ExtensionContext) {
+        context.subscriptions.push(
+            vscode.commands.registerCommand('moonbit-tasks.prj.testfile', (uri: vscode.Uri) => {
+                // based on language id
+                const cwd = path.dirname(uri.fsPath);
+                const filename = path.basename(uri.fsPath);
+                
+                if (gitTasksProvider._webview) {
+                    smartTaskExt.asyncSafeRunInTerminal(`cargo t "${filename}"`, cwd, gitTasksProvider._webview);
+                }
+            })
+        );
+    
+        // context.subscriptions.push(
+        //     vscode.commands.registerCommand('extension.deleteFile', async (uri: vscode.Uri) => {
+        //         const confirmed = await vscode.window.showWarningMessage(
+        //             `Are you sure you want to delete ${uri.fsPath}?`,
+        //             { modal: true },
+        //             'Yes'
+        //         );
+        //         if (confirmed === 'Yes') {
+        //             await vscode.workspace.fs.delete(uri);
+        //             vscode.window.showInformationMessage(`${uri.fsPath} deleted.`);
+        //         }
+        //     })
+        // );
+    }
+    registerContextMenu(context);
 }
 
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
@@ -1507,7 +1536,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     hasFetchable: boolean = false;
-    private async hasFetchableUpdates(webview: vscode.Webview): Promise<void> {
+    private async asyncSafeDetectFetchableUpdates(webview: vscode.Webview): Promise<void> {
         try {
             const repository = await this.getCurrentRepository(webview);
 
@@ -1556,7 +1585,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
 
-            this.hasFetchableUpdates(webview);
+            this.asyncSafeDetectFetchableUpdates(webview);
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();

@@ -175,7 +175,17 @@ async function asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: stri
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task
 export async function asyncSmartTaskRun(cmd: string, view:vscode.Webview) {
 	if (helper.isValidString(smartTasksDir)) {
-		asyncRunCmdInTerminal(cmd, smartTasksDir, view);
+		asyncSafeRunInTerminal(cmd, smartTasksDir, view);
+	}
+}
+
+export async function asyncSafeRunInTerminal(cmd: string, cwd: string, view:vscode.Webview) {
+	try {
+		if (cmd && cwd) {
+			await asyncRunCmdInTerminal(cmd, cwd, view);
+		}
+	} catch (error) {
+		console.error(`cmd: ${cmd}, error: ${error}`);
 	}
 }
 

@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120607",
+  "version": "0.12.2024120701",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -68,45 +68,57 @@
     },
     "commands": [
       {
-        "command": "moonbit-tasks.commit",
+        "command": "moonbit-tasks.git.commit",
         "title": "Commit",
         "icon": "$(check)"
       },
       {
-        "command": "moonbit-tasks.push",
+        "command": "moonbit-tasks.git.push",
         "title": "Push",
         "icon": "$(cloud-upload)"
       },
       {
-        "command": "moonbit-tasks.pull",
+        "command": "moonbit-tasks.git.pull",
         "title": "Pull",
         "icon": "$(arrow-down)"
       },
       {
-        "command": "moonbit-tasks.fetch",
+        "command": "moonbit-tasks.git.fetch",
         "title": "Fetch",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "moonbit-tasks.prj.testfile",
+        "title": "Run test in file",
         "icon": "$(sync)"
       }
     ],
     "menus": {
+      "explorer/context": [
+        {
+          "command": "moonbit-tasks.prj.testfile",
+          "when": "resourceLangId == moonbit || resourceLangId == rust || resourceType == directory || explorerResourceIsFolder",
+          "group": "navigation@1"
+        }
+      ],
       "view/title": [
         {
-          "command": "moonbit-tasks.commit",
+          "command": "moonbit-tasks.git.commit",
           "when": "view == myGitTasksCustomView && moonbit-tasks.hasStagedChanges == true",
           "group": "navigation@1"
         },
         {
-          "command": "moonbit-tasks.push",
+          "command": "moonbit-tasks.git.push",
           "when": "view == myGitTasksCustomView && moonbit-tasks.hasUnpushedChanges == true",
           "group": "navigation@2"
         },
         {
-          "command": "moonbit-tasks.pull",
+          "command": "moonbit-tasks.git.pull",
           "when": "view == myGitTasksCustomView && moonbit-tasks.hasUnpulledChanges == true",
           "group": "navigation@3"
         },
         {
-          "command": "moonbit-tasks.fetch",
+          "command": "moonbit-tasks.git.fetch",
           "when": "view == myGitTasksCustomView && moonbit-tasks.hasFetchable == true",
           "group": "navigation@4"
         }
