@@ -834,7 +834,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- Project Smart Tasks Tree View Panel -->
                         <!-- div class="smart-tasks-panel" -->
                             <div class="section-header">
-                                <img class="header-icon" src="${iconUri}" alt="Project Tasks"/>
+                                <img id="headerIcon" class="header-icon" src="${iconUri}" alt="Project Tasks"/>
                                 <span id="projectNameSpan"></span>
                                 <span> Project Tasks</span>
                             </div>
@@ -899,7 +899,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     gitCommit();
                                     break;
                                 case 'updateSmartTasksTree':
-                                    updateSmartTasksTreeView(message.projectName, message.items);
+                                    updateSmartTasksTreeView(message.projectName, message.iconUri, message.items);
                                     break;
                                 case 'gitChanges':
                                     updateGitChangesFileTree(message.changes);
@@ -1096,10 +1096,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'getChanges' });
                         }
 
-                        function updateSmartTasksTreeView(projectName, items) {
+                        function updateSmartTasksTreeView(projectName, projectIconUri, items) {
+                            console.log('updateSmartTasksTreeView called with:', projectName, projectIconUri, items);
                             const projectNameSpan = document.getElementById('projectNameSpan');
                             if (projectNameSpan) {
                                 projectNameSpan.innerHTML = projectName;
+                            }
+
+                            if (projectIconUri) {
+                                const headerIcon = document.getElementById('headerIcon');
+                                if (headerIcon) {
+                                    headerIcon.src = projectIconUri;
+                                }
                             }
 
                             const treeView = document.getElementById('smartTasksTreeView');
@@ -1552,13 +1560,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            //console.log('Refs:', refs); // Debug log
+            console.log('Refs:', refs); // Debug log
 
             const branches = await Promise.all(
                 refs
                 .filter((ref: any) => {
                     // Include only local branches; exclude HEAD and remote branches
-                    return ref.name && ref.name !== 'HEAD' && !(ref.name.includes('/') || ref.remote);
+                    return ref.type === 0 && ref.name && ref.name !== 'HEAD' && !(ref.name.includes('/') || ref.remote);
                 })
                 .map(async (branch: any) => {
                     //console.log('branch:', branch); // Debug log
@@ -1675,7 +1683,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         let projectName = '';
         if (mbTaskExt.smartCommandEntries.length === 0) {
             treeItems = [
-                { id: '1', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
+                { id: '', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
             ];
         } else {
             projectName = path.basename(mbTaskExt.smartTasksDir);
@@ -1686,10 +1694,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             }));
         }
 
+        const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(
+            this._extensionUri,
+            'images',
+            mbTaskExt.smartProjectIconUri.length > 0 ? mbTaskExt.smartProjectIconUri : 'file_type_rust_toolchain.svg'
+        ));
+
         //{ '🔍''⚙️''📁''🔧''📄' }
         webview.postMessage({
             type: 'updateSmartTasksTree',
             projectName: projectName,
+            iconUri: iconUri,
             items: treeItems
         });
     }

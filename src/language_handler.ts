@@ -43,6 +43,7 @@ export function convertGitPathForWindowsPath(gitPath: string): string {
 
 export let smartTasksRootTitle = "No active document";
 export let smartCommandEntries:Array<[command:string, shellcmd:string]> = [];
+export let smartProjectIconUri:string = "";
 export let smartTasksDir:string = "";
 export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: string) {
     documentPathOrDir = convertGitPathForWindowsPath(documentPathOrDir);
@@ -59,7 +60,8 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     } else if (undefined === result.handler.commands) {
         smartTasksRootTitle = "No commands found in signature";
     } else {
-        smartCommandEntries = Array.from(result.handler.commands.entries());//.map(([command, shellcmd]) => ({command, shellcmd})));
+        smartCommandEntries = Array.from(result.handler.commands.entries());
+        smartProjectIconUri = result.handler.icon;
         smartTasksDir = result.rootPath ? result.rootPath : "";
     }
 
