@@ -323,3 +323,4 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Icon for Project Tasks.
 
+- Filter out tags/remotes from git.getRefs().
