@@ -126,7 +126,10 @@
     "images/file_type_python.svg",
     "images/file_type_typescript_official.svg",
     "images/file_type_swift.svg",
-    "images/folder_type_cmake.svg"
+    "images/folder_type_cmake.svg",
+    "out/**/*",
+    "images/**/*",
+    "node_modules/@vscode/codicons/dist/**/*"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",

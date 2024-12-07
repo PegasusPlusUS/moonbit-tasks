@@ -347,7 +347,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // For both staged and unstaged files
                         async function safeAsyncOpenChange() {
                             try {
-                                await  vscode.commands.executeCommand('git.openChange', fileUri);
+                                await vscode.commands.executeCommand('git.openChange', fileUri);
                             } catch (error) {
                                 console.error(`executeCommand 'git.openChange', ${error}`);
                             }
@@ -1560,38 +1560,38 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            console.log('Refs:', refs); // Debug log
+            //console.log('Refs:', refs); // Debug log
 
             const branches = await Promise.all(
                 refs
-                .filter((ref: any) => {
-                    // Include only local branches; exclude HEAD and remote branches
-                    return ref.type === 0 && ref.name && ref.name !== 'HEAD' && !(ref.name.includes('/') || ref.remote);
-                })
-                .map(async (branch: any) => {
-                    //console.log('branch:', branch); // Debug log
-                    // Attempt to fetch upstream information
-                    const branchName = branch.name ? branch.name : '';
-                    let upstream = null;
-        
-                    try {
-                        // Fetch branch details for upstream info
-                        const branchDetails = await repo.getBranch(branchName);
-                        //console.log('branch detail:', branchDetails); // Debug log
-                        if (branchDetails.upstream) {
-                            upstream = branchDetails.upstream.remote + '/' + branchDetails.upstream.name;
-                        }
-                    } catch (err) {
-                        console.warn(`Failed to get upstream for branch ${branchName}:`, err);
-                    }
-        
-                    //console.log(`banchName: ${branchName}, upstream: ${upstream} `); // Debug log
+                    .filter((ref: any) => {
+                        // Include only local branches; exclude HEAD and remote branches
+                        return ref.type === 0 && ref.name && ref.name !== 'HEAD' && !(ref.name.includes('/') || ref.remote);
+                    })
+                    .map(async (branch: any) => {
+                        //console.log('branch:', branch); // Debug log
+                        // Attempt to fetch upstream information
+                        const branchName = branch.name ? branch.name : '';
+                        let upstream = null;
 
-                    return {
-                        name: branchName,
-                        tooltip: upstream ? `-> ${upstream}` : 'No upstream branch',
-                    };
-                })
+                        try {
+                            // Fetch branch details for upstream info
+                            const branchDetails = await repo.getBranch(branchName);
+                            //console.log('branch detail:', branchDetails); // Debug log
+                            if (branchDetails.upstream) {
+                                upstream = branchDetails.upstream.remote + '/' + branchDetails.upstream.name;
+                            }
+                        } catch (err) {
+                            console.warn(`Failed to get upstream for branch ${branchName}:`, err);
+                        }
+
+                        //console.log(`banchName: ${branchName}, upstream: ${upstream} `); // Debug log
+
+                        return {
+                            name: branchName,
+                            tooltip: upstream ? `-> ${upstream}` : 'No upstream branch',
+                        };
+                    })
             );
 
             //console.log('Processed branches:', branches); // Debug log
@@ -1704,7 +1704,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         webview.postMessage({
             type: 'updateSmartTasksTree',
             projectName: projectName,
-            iconUri: iconUri,
+            iconUri: `${iconUri}`,
             items: treeItems
         });
     }
