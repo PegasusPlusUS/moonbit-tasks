@@ -157,12 +157,17 @@ async function asyncInitLangDef() {
 				['Upgrade', 'rustup upgrade'],
 			]), 'file_type_rust_toolchain.svg')],
 			['Nim', new handlerInfo('*.nimble', new Map([
+				['Build', 'nimble build'],
+				['Check', 'nimble check'],
+				['Test', 'nimble test'],
 				['Run', 'nimble run'],
 				// CMD
 				// ['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
 				// Bash
 				['Format', "find . -type f -name '*.nim' -exec nimpretty --backup:off {} \\;"],
-				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"]
+				['Suggest', 'nimsuggest'],
+				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],
+				['Clean', 'nimble clean'],
 			]), 'file_type_nimble.svg')],
 			['Cangjie', new handlerInfo('cjpm.toml', new Map([
 				['Build', 'cjpm build'],
@@ -176,6 +181,8 @@ async function asyncInitLangDef() {
 				['Build', 'zig build'],
 				['Run', 'zig build run'],
 				['Test', 'zig build test'],
+				['Format', "find . -type f -name '*.zig' -exec zig fmt {} \\;"],
+				['Zen', 'zig zen'],
 			]), 'file_type_zig.svg')],
 			['Gleam', new handlerInfo('gleam.toml', new Map([
 				['Build', 'gleam build'],

@@ -8,17 +8,19 @@ import { asyncRefereshSmartTasksDataProvider, smartTasksDir } from "./language_h
 
 export class projectDef {
 	rootPath: string | undefined;
+	langID: string | undefined;
 	handler: langDef.handlerInfo | undefined;
 	error: string | undefined;
 
-	constructor(root:string | undefined, handler:langDef.handlerInfo | undefined) {
+	constructor(root:string | undefined, langID: string | undefined, handler:langDef.handlerInfo | undefined) {
+		this.langID = langID;
 		this.rootPath = root;
 		this.handler = handler;
 	}
 }
 
 // Search project at designated directory
-async function asyncSearchProjectAtDirectory(fileDir: string): Promise<langDef.handlerInfo | undefined> {
+async function asyncSearchProjectAtDirectory(fileDir: string): Promise<projectDef | undefined> {
 	/// Just search files within a dir, no subdir yet
 	/// extensions can be written as '*.nimble' '*.json' '*.csproj'
 	async function asyncSearchFilesByExtension(folderPath: string, extensionExp: string): Promise<boolean> {
@@ -84,7 +86,7 @@ async function asyncSearchProjectAtDirectory(fileDir: string): Promise<langDef.h
 				}
 
 				if (fSigFileFound) {
-					return cmdHandler;
+					return new projectDef(fileDir, languageName, cmdHandler);
 				}
 			}
 		}
@@ -101,7 +103,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 	function checkSignature(filePath: string) : projectDef | undefined {	
 		let found = false;
 		let basename = path.basename(filePath);
-		for (let [_languageName, cmdHandler] of langDef.languageHandlerMap) {
+		for (let [languageName, cmdHandler] of langDef.languageHandlerMap) {
 			// *.nimble
 			if (langDef.handlerInfo.isValid(cmdHandler) && helper.isValidString(cmdHandler.signatureFilePattern)) {
 				const extensions = cmdHandler.signatureFilePattern.split('|');
@@ -112,7 +114,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 					);
 
 					if (found) {
-						return new projectDef(path.dirname(filePath), cmdHandler);
+						return new projectDef(path.dirname(filePath), languageName, cmdHandler);
 					}
 				}
 			}
@@ -139,19 +141,17 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 	return projectFound;
 }
 
-async function asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) : Promise<projectDef> {
-	let handler: langDef.handlerInfo | undefined;
-	let projectDir: string | undefined;
+async function asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: string) : Promise<projectDef | undefined> {
+	let projectDef: projectDef | undefined;
 	let currentFolder = fileDir;
 	while (true) {
 		try {
-			handler = await asyncSearchProjectAtDirectory(currentFolder);
+			projectDef = await asyncSearchProjectAtDirectory(currentFolder);
 		} catch (err) {
 			console.error(`in search project at ${currentFolder}, ${err}`);
 		}
 
-		if (langDef.handlerInfo.isValid(handler)) {
-			projectDir = currentFolder;
+		if (projectDef && langDef.handlerInfo.isValid(projectDef.handler)) {
 		}
 		else {
 			const parentFolder = path.dirname(currentFolder);
@@ -170,7 +170,7 @@ async function asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir: stri
 		}
 		break;
 	}
-	return new projectDef(projectDir, handler);
+	return projectDef;
 }
 
 /// If current file is a signature, or a signature in current dir or current project root dir or any project root dir, do the task

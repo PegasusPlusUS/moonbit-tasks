@@ -1087,9 +1087,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             startInterval(1000);
                         })();
 
-                        // Initialize by getting changes
-                        vscode.postMessage({ command: 'getChanges' });
-
                         function gitStage() {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
                                 .map(cb => cb.getAttribute('data-file'));
@@ -1336,6 +1333,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 isStaged: isStaged
                             });
                         }
+
+                        console.log(\`Script loaded\`);
                     </script>
                 </body>
             </html>
@@ -1651,6 +1650,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             // Setup file system watcher when repository is available
             this.watchFileSystemChangeForCurrentRepository(webview);
 
+            this.updateSmartTasksTreeView(webview);
+            
             webview.postMessage({
                 type: 'gitChanges',
                 changes: allChanges,
@@ -1729,6 +1730,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             mbTaskExt.smartProjectIconUri.length > 0 ? mbTaskExt.smartProjectIconUri : 'file_type_rust_toolchain.svg'
         ));
 
+        {
+            const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+            console.log(`[${timestamp}] Post messsage to webview ${projectName} ${iconUri} ${treeItems.length}`);
+        }
         //{ '🔍''⚙️''📁''🔧''📄' }
         webview.postMessage({
             type: 'updateSmartTasksTree',

@@ -59,7 +59,7 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     let result = await asyncDetectProjectForDocumentOrDirectory(documentPathOrDir);
     {
         const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-        console.log(`[${timestamp}] detect result ${result}`);
+        console.log(`[${timestamp}] Detect result ${result?(result.langID + ' at ' + result.rootPath):''}`);
     }
 
     if (result === undefined || result.handler === undefined) {
