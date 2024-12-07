@@ -133,7 +133,8 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 			projectFound = await asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
 		}
 	} catch (err) {
-		console.log(`Error occurred while searching project signature file: ${err}`);
+		const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+		console.log(`[${timestamp}]Error occurred while searching project signature file: ${err}`);
 	}
 	return projectFound;
 }

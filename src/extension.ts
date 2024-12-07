@@ -1745,19 +1745,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             this.fileSystemWatcher?.dispose();
 
             // Create new watcher for the repository root
+            const rootPath = mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path);
             this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher(
-                new vscode.RelativePattern(mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path), '**/*')
+                new vscode.RelativePattern(rootPath, '**/*')
             );
+            const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+            console.log(`[${timestamp}] create file system watcher for ${rootPath}`);
 
             // Watch for all file system events
             this.fileSystemWatcher.onDidChange(() => {
+                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+                console.log(`[${timestamp}] change in ${rootPath} detect`);
                 this.getGitChanges(webview);
             });
             this.fileSystemWatcher.onDidCreate(() => {
+                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+                console.log(`[${timestamp}] create in ${rootPath} detect`);
                 this.getGitChanges(webview);
             });
             this.fileSystemWatcher.onDidDelete(() => {
-                this.getGitChanges(webview);
+                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
+                console.log(`[${timestamp}] delete in ${rootPath} detect`);
+                 this.getGitChanges(webview);
             });
         }
     }
