@@ -89,7 +89,7 @@
       },
       {
         "command": "moonbit-tasks.prj.testfile",
-        "title": "Run test in file",
+        "title": "Run test in",
         "icon": "$(sync)"
       }
     ],

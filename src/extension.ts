@@ -186,6 +186,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public _webview?: vscode.Webview;  // Made public so command can access it
     private fileSystemWatcher: vscode.FileSystemWatcher | undefined;
     private watchedDir:string = "";
+    private _intervalId?: NodeJS.Timeout;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this.hasHidden = false;
@@ -1744,6 +1745,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    hasChangesToDetect : boolean = false;
     private async watchFileSystemChangeForCurrentRepository(repo: any, webview: vscode.Webview) {
         if (repo) {
             const watchedDir = mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path);
@@ -1762,22 +1764,44 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 // Watch for all file system events
                 this.fileSystemWatcher.onDidChange(() => {
                     console.log(`[${logTimeStamp()}] change in ${watchedDir} detect`);
-                    this.getGitChanges(webview);
+                    this.hasChangesToDetect = true; // this.getGitChanges(webview);
                 });
                 this.fileSystemWatcher.onDidCreate(() => {
                     console.log(`[${logTimeStamp()}] create in ${watchedDir} detect`);
-                    this.getGitChanges(webview);
+                    this.hasChangesToDetect = true; // this.getGitChanges(webview);
                 });
                 this.fileSystemWatcher.onDidDelete(() => {
                     console.log(`[${logTimeStamp()}] delete in ${watchedDir} detect`);
-                    this.getGitChanges(webview);
+                    this.hasChangesToDetect = true; // this.getGitChanges(webview);
                 });
+
+                if (this._intervalId === undefined) {
+                    this._intervalId = setInterval(() => {
+                        if (this.hasChangesToDetect) {
+                            this.hasChangesToDetect = false;
+                            console.log(`[${logTimeStamp()}] start get git changes`);
+                            this.getGitChanges(webview);
+                        }
+                    }, 1000); // detect every seconds, not at once
+                }
             }
+        }
+    }
+
+    // // Clean up the interval when the webview is disposed
+    // webviewView.onDidDispose(() => {
+    //     this._stopIntervalTask();
+    // });
+    private _stopIntervalTask(): void {
+        if (this._intervalId) {
+            clearInterval(this._intervalId);
+            this._intervalId = undefined;
         }
     }
 
     // Make sure to dispose the watcher when the extension is deactivated
     public dispose() {
         this.fileSystemWatcher?.dispose();
+        this._stopIntervalTask();
     }
 }
