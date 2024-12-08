@@ -13,6 +13,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 //import * as child_process from 'child_process';
+export function logTimeStamp() : string {
+    return new Date().toLocaleString(); // Format: "2024-01-05T09:45:30.123Z"
+}
 
 // Add this interface at the top of your file
 interface GitExtension {
@@ -182,6 +185,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'moonbit-tasks.gitView';
     public _webview?: vscode.Webview;  // Made public so command can access it
     private fileSystemWatcher: vscode.FileSystemWatcher | undefined;
+    private watchedDir:string = "";
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this.hasHidden = false;
@@ -340,7 +344,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 scheme: 'git-changes'
                             });
 
-                            console.log(`Opening multi diff editor for: ${multiDiffSourceUri}, ${resources}`);
+                            console.log(`[${logTimeStamp()}] Opening multi diff editor for: ${multiDiffSourceUri}, ${resources}`);
                             for (const resource of resources) {
                                 console.log(`Resource: ${resource.originalUri}, ${resource.modifiedUri}`);
                             }
@@ -366,7 +370,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     }
                     break;
                 case 'viewFileChanges':
-                    console.log(`Opening diff for: ${data.filePath}, staged: ${data.isStaged}`);
+                    console.log(`[${logTimeStamp()}] Opening diff for: ${data.filePath}, staged: ${data.isStaged}`);
                     //const repo = await this.getCurrentRepository(webviewView.webview);
                     //if (repo) {
                     try {
@@ -421,7 +425,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         try {
             await vscode.workspace.getConfiguration().update('moonbit-tasks.currentRepository', data.path, true);
         } catch (error: any) {
-            console.error('Failed to save current repository path:', error);
+            console.error(`[${logTimeStamp()}] Failed to save current repository path:`, error);
             this.currentRepositoryPath = data.path;
         }
     }
@@ -431,7 +435,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         try {
             path = await vscode.workspace.getConfiguration().get('moonbit-tasks.currentRepository');
         } catch (error: any) {
-            console.error('Failed to get current repository path:', error);
+            console.error(`[${logTimeStamp()}] Failed to get current repository path:`, error);
         }
 
         if (path === undefined) {
@@ -1185,10 +1189,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function discardFile(filePath) {
-                            console.log('Discard file called for:', filePath);
                             showModal(
                                 () => {
-                                    console.log('Executing discard for:', filePath);
                                     vscode.postMessage({ 
                                         command: 'discard',
                                         files: [filePath]
@@ -1552,7 +1554,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 });
             }
         } catch (error: any) {
-            console.error('Error in hasFetchableUpdates:', error);
+            console.error(`[${logTimeStamp()}] Error in hasFetchableUpdates:`, error);
         }
     }
 
@@ -1591,7 +1593,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
-            //console.log('Refs:', refs); // Debug log
+            //console.log(`[${logTimeStamp()}] Refs:`, refs); // Debug log
 
             const branches = await Promise.all(
                 refs
@@ -1651,7 +1653,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             this.updateTitleBarGitButtons(hasUnpushedCommits, hasUnpulledCommits, stagedChanges);
 
             // Setup file system watcher when repository is available
-            this.watchFileSystemChangeForCurrentRepository(webview);
+            this.watchFileSystemChangeForCurrentRepository(repo, webview);
 
             this.updateSmartTasksTreeView(webview);
 
@@ -1679,8 +1681,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     // Update highlited state of title bar git buttons
     private updateTitleBarGitButtons(hasUnpushedCommits: boolean, hasUnpulledCommits: boolean, stagedChanges: any) {
         // Instead of trying to access webviewViews, just update the command contexts
-        const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-        console.log(`[${timestamp}] Git: unpushed=${hasUnpushedCommits}, unpulled=${hasUnpulledCommits}, staged=${stagedChanges.length > 0}, unfetchable=${this.hasFetchable}`);
+        console.log(`[${logTimeStamp()}] Git: unpushed=${hasUnpushedCommits}, unpulled=${hasUnpulledCommits}, staged=${stagedChanges.length > 0}, unfetchable=${this.hasFetchable}`);
 
         vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpushedChanges', hasUnpushedCommits);
         vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpulledChanges', hasUnpulledCommits);
@@ -1733,10 +1734,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             mbTaskExt.smartProjectIconUri.length > 0 ? mbTaskExt.smartProjectIconUri : 'file_type_rust_toolchain.svg'
         ));
 
-        {
-            const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-            console.log(`[${timestamp}] Post messsage to webview ${projectName} ${iconUri} ${treeItems.length}`);
-        }
+        console.log(`[${logTimeStamp()}] Post messsage to webview ${projectName} ${iconUri} ${treeItems.length}`);
         //{ '🔍''⚙️''📁''🔧''📄' }
         webview.postMessage({
             type: 'updateSmartTasksTree',
@@ -1746,36 +1744,35 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         });
     }
 
-    private async watchFileSystemChangeForCurrentRepository(webview: vscode.Webview) {
-        const repo = await this.getCurrentRepository(webview);
-        if (repo && repo.rootUri) {
-            // Dispose existing watcher if any
-            this.fileSystemWatcher?.dispose();
+    private async watchFileSystemChangeForCurrentRepository(repo: any, webview: vscode.Webview) {
+        if (repo) {
+            const watchedDir = mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path);
+            if (watchedDir !== this.watchedDir) {
+                // Dispose existing watcher if any
+                this.fileSystemWatcher?.dispose();
 
-            // Create new watcher for the repository root
-            const rootPath = mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path);
-            this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher(
-                new vscode.RelativePattern(rootPath, '**/*')
-            );
-            const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-            console.log(`[${timestamp}] create file system watcher for ${rootPath}`);
+                // Create new watcher for the repository root
+                this.fileSystemWatcher = vscode.workspace.createFileSystemWatcher(
+                    new vscode.RelativePattern(watchedDir, '**/*')
+                );
+                this.watchedDir = watchedDir;
 
-            // Watch for all file system events
-            this.fileSystemWatcher.onDidChange(() => {
-                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-                console.log(`[${timestamp}] change in ${rootPath} detect`);
-                this.getGitChanges(webview);
-            });
-            this.fileSystemWatcher.onDidCreate(() => {
-                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-                console.log(`[${timestamp}] create in ${rootPath} detect`);
-                this.getGitChanges(webview);
-            });
-            this.fileSystemWatcher.onDidDelete(() => {
-                const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-                console.log(`[${timestamp}] delete in ${rootPath} detect`);
-                 this.getGitChanges(webview);
-            });
+                console.log(`[${logTimeStamp()}] create file system watcher for ${watchedDir}`);
+
+                // Watch for all file system events
+                this.fileSystemWatcher.onDidChange(() => {
+                    console.log(`[${logTimeStamp()}] change in ${watchedDir} detect`);
+                    this.getGitChanges(webview);
+                });
+                this.fileSystemWatcher.onDidCreate(() => {
+                    console.log(`[${logTimeStamp()}] create in ${watchedDir} detect`);
+                    this.getGitChanges(webview);
+                });
+                this.fileSystemWatcher.onDidDelete(() => {
+                    console.log(`[${logTimeStamp()}] delete in ${watchedDir} detect`);
+                    this.getGitChanges(webview);
+                });
+            }
         }
     }
 

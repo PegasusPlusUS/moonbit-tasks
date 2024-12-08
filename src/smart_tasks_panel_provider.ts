@@ -5,6 +5,7 @@ import { access as fsAccess, constants as fsConstants, promises as fsPromises } 
 import * as helper from './helper';
 import * as langDef from './language_def';
 import { asyncRefereshSmartTasksDataProvider, smartTasksDir } from "./language_handler";
+import { logTimeStamp } from './extension';
 
 export class projectDef {
 	rootPath: string | undefined;
@@ -135,8 +136,7 @@ export async function asyncDetectProjectForDocumentOrDirectory(documentPathOrDir
 			projectFound = await asyncSearchSignatureAtDirectoryAndUpWithinWorkspace(fileDir);
 		}
 	} catch (err) {
-		const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-		console.log(`[${timestamp}]Error occurred while searching project signature file: ${err}`);
+		console.log(`[${logTimeStamp()}] Error occurred while searching project signature file: ${err}`);
 	}
 	return projectFound;
 }

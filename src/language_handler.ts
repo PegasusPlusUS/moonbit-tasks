@@ -5,6 +5,7 @@ import {
     asyncActiveDocumentChangesHandler,
     asyncDetectProjectForDocumentOrDirectory,
 } from './smart_tasks_panel_provider';
+import { logTimeStamp } from './extension';
 
 export const extension_name = "moonbit-tasks";
 export function active(context: vscode.ExtensionContext) {
@@ -50,17 +51,11 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     smartTasksRootTitle = "Detecting " + documentPathOrDir;
     smartCommandEntries = [];
 
-    {
-        const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-        console.log(`[${timestamp}] ${smartTasksRootTitle}`);
-    }
+    console.log(`[${logTimeStamp()}] ${smartTasksRootTitle}`);
     vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
     
     let result = await asyncDetectProjectForDocumentOrDirectory(documentPathOrDir);
-    {
-        const timestamp = new Date().toISOString(); // Format: "2024-01-05T09:45:30.123Z"
-        console.log(`[${timestamp}] Detect result ${result?(result.langID + ' at ' + result.rootPath):''}`);
-    }
+    console.log(`[${logTimeStamp()}] Detect result ${result?(result.langID + ' at ' + result.rootPath):''}`);
 
     if (result === undefined || result.handler === undefined) {
         smartTasksRootTitle = "Can't find signature of project";

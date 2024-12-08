@@ -329,3 +329,6 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Nim format script for bash.
 
+### 0.12.2024120702
+
+- Responsive update.
