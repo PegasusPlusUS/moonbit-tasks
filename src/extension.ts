@@ -22,19 +22,6 @@ interface GitExtension {
     getAPI(version: number): Promise<any>;
 }
 
-interface GitRepository {
-    rootUri: { path: string };
-    // ... other properties
-}
-
-interface GitRef {
-    type: number;
-    name: string;
-    remote: boolean;
-    upstream?: { name: string };
-    // ... other properties
-}
-
 // Map task types to appropriate codicons
 const taskIconMap: { [key: string]: string } = {
     'build': 'codicon-package',          // Package/box icon for build
@@ -182,7 +169,6 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
 }
 
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'moonbit-tasks.gitView';
     public _webview?: vscode.Webview;  // Made public so command can access it
     private fileSystemWatcher: vscode.FileSystemWatcher | undefined;
     private watchedDir:string = "";
@@ -197,7 +183,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
         this._webview = webviewView.webview;
@@ -329,17 +315,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 }
                             });
 
-                            function toGitUri(uri: vscode.Uri, ref: string): vscode.Uri {
-                                const params = {
-                                    path: uri.fsPath,
-                                    ref
-                                };
-                                return uri.with({
-                                    scheme: 'git',
-                                    query: JSON.stringify(params)
-                                });
-                            }
-
                             const multiDiffSourceUri = vscode.Uri.file(repo.rootUri.path).with({
                                 scheme: 'git-changes'
                             });
@@ -443,24 +418,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         return path;
-    }
-
-    private getFileIcon(extension: string): vscode.ThemeIcon {
-        // Map file extensions to ThemeIcon IDs
-        const iconMap: { [key: string]: string } = {
-            '.rs': 'rust',
-            '.ts': 'typescript',
-            '.js': 'javascript',
-            '.py': 'python',
-            '.go': 'go',
-            '.java': 'java',
-            '.cpp': 'cpp',
-            '.c': 'c',
-            // Add more mappings as needed
-        };
-
-        const iconId = iconMap[extension] || 'file';
-        return new vscode.ThemeIcon(iconId);
     }
 
     // Add status icon mapping
@@ -619,8 +576,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         .tooltip {
                             position: absolute;
-                            background: var(--vscode-editor-background);
-                            border: 1px solid var(--vscode-widget-border);
+                            background: var(--vscode-editor-background)
+                            border: 1px solid var(--vscode-widget-border)
                             padding: 4px 8px;
                             border-radius: 2px;
                             font-size: 12px;
@@ -648,15 +605,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .status-message.error {
-                            background: var(--vscode-inputValidation-errorBackground);
-                            border: 1px solid var(--vscode-inputValidation-errorBorder);
-                            color: var(--vscode-inputValidation-errorForeground);
+                            background: var(--vscode-inputValidation-errorBackground)
+                            border: 1px solid var(--vscode-inputValidation-errorBorder)
+                            color: var(--vscode-inputValidation-errorForeground)
                         }
 
                         .status-message.info {
-                            background: var(--vscode-inputValidation-infoBackground);
-                            border: 1px solid var(--vscode-inputValidation-infoBorder);
-                            color: var(--vscode-inputValidation-infoForeground);
+                            background: var(--vscode-inputValidation-infoBackground)
+                            border: 1px solid var(--vscode-inputValidation-infoBorder)
+                            color: var(--vscode-inputValidation-infoForeground)
                         }
 
                         .button-container {
@@ -667,8 +624,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .button {
-                            background-color: var(--vscode-button-background, #0E639C);
-                            color: var(--vscode-button-foreground, #ffffff);
+                            background-color: var(--vscode-button-background, #0E639C)
+                            color: var(--vscode-button-foreground, #ffffff)
                             border: none;
                             padding: 4px 12px;
                             border-radius: 2px;
@@ -681,7 +638,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .button:hover {
-                            background-color: var(--vscode-button-hoverBackground, #1177bb);
+                            background-color: var(--vscode-button-hoverBackground, #1177bb)
                         }
 
                         .button:disabled {
@@ -694,7 +651,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             padding: 2px 4px;
                             background: transparent;
                             border: none;
-                            color: var(--vscode-foreground);
+                            color: var(--vscode-foreground)
                             cursor: pointer;
                             font-size: 12px;
                             opacity: 0.8;
@@ -702,7 +659,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         .action-button:hover {
                             opacity: 1;
-                            background: var(--vscode-button-background);
+                            background: var(--vscode-button-background)
                         }
 
                         .commit-area {
@@ -713,9 +670,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             width: calc(100% - 16px);  /* Full width minus margins */
                             padding: 4px 8px;
                             margin-bottom: 8px;
-                            background: var(--vscode-input-background);
-                            color: var(--vscode-input-foreground);
-                            border: 1px solid var(--vscode-input-border);
+                            background: var(--vscode-input-background)
+                            color: var(--vscode-input-foreground)
+                            border: 1px solid var(--vscode-input-border)
                             border-radius: 2px;
                             font-family: inherit;
                             font-size: 12px;
@@ -766,9 +723,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .select-control {
-                            background: var(--vscode-dropdown-background);
-                            color: var(--vscode-dropdown-foreground);
-                            border: 1px solid var(--vscode-dropdown-border);
+                            background: var(--vscode-dropdown-background)
+                            color: var(--vscode-dropdown-foreground)
+                            border: 1px solid var(--vscode-dropdown-border)
                             padding: 2px 4px;
                             border-radius: 2px;
                             font-size: 12px;
@@ -777,8 +734,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         /* Add styles for unselected branch state */
                         .select-control.no-branch-selected {
-                            border-color: var(--vscode-inputValidation-errorBorder);
-                            background-color: var(--vscode-inputValidation-errorBackground);
+                            border-color: var(--vscode-inputValidation-errorBorder)
+                            background-color: var(--vscode-inputValidation-errorBackground)
                         }
 
                         .select-control:hover {
@@ -801,17 +758,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             top: 50%;
                             left: 50%;
                             transform: translate(-50%, -50%);
-                            background-color: var(--vscode-editor-background);
+                            background-color: var(--vscode-editor-background)
                             padding: 16px;
                             border-radius: 4px;
-                            border: 1px solid var(--vscode-widget-border);
+                            border: 1px solid var(--vscode-widget-border)
                             min-width: 300px;
                             z-index: 1001;
                         }
 
                         .modal-content {
                             margin-bottom: 16px;
-                            color: var(--vscode-foreground);
+                            color: var(--vscode-foreground)
                         }
 
                         .modal-buttons {
@@ -828,13 +785,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .modal-button-primary {
-                            background-color: var(--vscode-button-background);
-                            color: var(--vscode-button-foreground);
+                            background-color: var(--vscode-button-background)
+                            color: var(--vscode-button-foreground)
                         }
 
                         .modal-button-secondary {
-                            background-color: var(--vscode-button-secondaryBackground);
-                            color: var(--vscode-button-secondaryForeground);
+                            background-color: var(--vscode-button-secondaryBackground)
+                            color: var(--vscode-button-secondaryForeground)
                         }
 
                         .file-icon {
@@ -849,13 +806,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
                             
                         .action-button.has-updates {
-                            color: var(--vscode-gitDecoration-untrackedResourceForeground);
+                            color: var(--vscode-gitDecoration-untrackedResourceForeground)
                             font-weight: bold;
                         }
                     </style>
                 </head>
                 <body>
-                    <div class="panel-container">
+                    <!-- div class="panel-container" -->
                         <!-- Git Source Control Panel -->
                         <!-- div class="git-panel" -->
                             <div class="section-header">
@@ -913,7 +870,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <!-- Smart Tasks tree items will be populated here -->
                             </div>
                         <!-- /div -->
-                    </div>
+                    <!-- /div -->
 
                     <div id="confirmModal" class="modal-overlay">
                         <div class="modal">
@@ -1406,10 +1363,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         const currentRepoPath = await this.getCurrentRepositoryPath();
         const repoIndex = git.repositories.findIndex((r: any) => r.rootUri.path === currentRepoPath);
 
-        // If there's no tasks detected, try detect git path
+        // If there's no tasks detected, try to detect git path
         if (currentRepoPath && currentRepoPath !== '') {
             if (mbTaskExt.smartCommandEntries.length === 0) {
-                mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath);
+                mbTaskExt.asyncRefereshSmartTasksDataProvider(currentRepoPath).catch((error) => {
+                    console.error(`[${logTimeStamp()}] Error:`, error);
+                });
             }
         }
 
@@ -1661,7 +1620,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             const repo = git.repositories[repoIndex !== -1 ? repoIndex : 0];
             const state = repo.state;
 
-            this.asyncSafeDetectFetchableUpdates(webview);
+            this.asyncSafeDetectFetchableUpdates(webview).catch((error) => {
+                console.error(`[${logTimeStamp()}] Error:`, error);
+            });
 
             // Use getRefs() instead of accessing state.refs directly
             const refs = await repo.getRefs();
@@ -1709,12 +1670,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 return `Invalid status: ${typeof statusCode} ${statusCode}`;
             }
 
-            interface changeItem {
-                path: string;
-                originalUri: vscode.Uri;
-                renameUri: vscode.Uri | undefined;
-                status: GitStatusCode;
-            }
+            // interface changeItem {
+            //     path: string;
+            //     originalUri: vscode.Uri;
+            //     renameUri: vscode.Uri | undefined;
+            //     status: GitStatusCode;
+            // }
 
             interface workingChange {
                 path: string,
@@ -1798,10 +1759,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         // Instead of trying to access webviewViews, just update the command contexts
         console.log(`[${logTimeStamp()}] Git: unpushed=${hasUnpushedCommits}, unpulled=${hasUnpulledCommits}, staged=${stagedChanges.length > 0}, unfetchable=${this.hasFetchable}`);
 
-        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpushedChanges', hasUnpushedCommits);
-        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpulledChanges', hasUnpulledCommits);
-        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasStagedChanges', stagedChanges.length > 0);
-        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasFetchable', this.hasFetchable);
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpushedChanges', hasUnpushedCommits).then(()=>{});
+        //.catch((error: unknown) => { console.error(`[${logTimeStamp()}] Error:`, error); });
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasUnpulledChanges', hasUnpulledCommits).then(()=>{});
+        //.catch((error: unknown) => { console.error(`[${logTimeStamp()}] Error:`, error); });
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasStagedChanges', stagedChanges.length > 0).then(()=>{});
+        //.catch((error: unknown) => { console.error(`[${logTimeStamp()}] Error:`, error); });
+        vscode.commands.executeCommand('setContext', 'moonbit-tasks.hasFetchable', this.hasFetchable).then(()=>{});
+        //.catch((error:unknown) => { console.error(`[${logTimeStamp()}] Error:`, error); });
     }
 
     private async getGitAPI(webview: vscode.Webview) {
@@ -1851,12 +1816,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
         console.log(`[${logTimeStamp()}] Post messsage to webview ${projectName} ${iconUri} ${treeItems.length}`);
         //{ '🔍''⚙️''📁''🔧''📄' }
-        webview.postMessage({
+        if (!webview.postMessage({
             type: 'updateSmartTasksTree',
             projectName: projectName,
             iconUri: `${iconUri}`,
             items: treeItems
-        });
+        })) {
+            console.error(`[${logTimeStamp()}] post message to webview failed.`);
+        };
     }
 
     hasChangesToDetect: boolean = false;
@@ -1881,7 +1848,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         setTimeout(() => {
                             tp.hasChangesToDetect = false;
                             console.log(`[${logTimeStamp()}] start get git changes`);
-                            tp.getGitChanges(webview);
+                            tp.getGitChanges(webview).catch((error) => {
+                                console.error(`[${logTimeStamp()}] Error:`, error);
+                            });
                         }, 500);
                     }
                 }
