@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120902",
+  "version": "0.12.20241209023",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -141,7 +141,8 @@
     "images/folder_type_cmake.svg",
     "out/**/*",
     "images/**/*",
-    "node_modules/@vscode/codicons/dist/**/*"
+    "node_modules/@vscode/codicons/dist/**/*",
+    "LICENSE"
   ],
   "scripts": {
     "vscode:prepublish": "npm run compile",
