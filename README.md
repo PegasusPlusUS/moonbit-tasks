@@ -340,3 +340,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120903
 
 - Add LICENSE into package.json to avoid warning on vsce for macOS
+
+### 0.12.2024120904
+
+- File status one letter mark

@@ -455,7 +455,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .git-status {
                             display: inline-block;
                             width: 8px;
-                            margin-right: 8px;
+                            margin-right: 4px;
                             color: var(--vscode-gitDecoration-modifiedResourceForeground);
                             font-family: monospace;
                             font-weight: bold;
@@ -533,7 +533,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .file-actions {
                             display: none;
                             position: absolute;
-                            right: 8px;
+                            right: 32px;
                             top: 50%;
                             transform: translateY(-50%);
                         }
@@ -654,9 +654,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             width: calc(100% - 16px);  /* Full width minus margins */
                             padding: 4px 8px;
                             margin-bottom: 8px;
-                            background: var(--vscode-input-background)
-                            color: var(--vscode-input-foreground)
-                            border: 1px solid var(--vscode-input-border)
+                            background: var(--vscode-input-background);
+                            color: var(--vscode-input-foreground);
+                            border: 1px solid var(--vscode-input-border);
                             border-radius: 2px;
                             font-family: inherit;
                             font-size: 12px;

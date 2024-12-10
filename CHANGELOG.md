@@ -256,3 +256,11 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ## 0.12.2024120902
 
 - File status in repo
+
+## 0.12.2024120903
+
+- Add LICENSE into package.json to avoid warning on vsce for macOS
+
+## 0.12.2024120904
+
+- File status one letter mark
