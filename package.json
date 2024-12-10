@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120702",
+  "version": "0.12.2024120902",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"
@@ -149,7 +149,11 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "vsce-uninst": "code --uninstall-extension PegasusCadence.moonbit-tasks",
+    "vsce-restart": "code --reload-window",
+    "vsce-inst": "bash -c 'code --install-extension ./moonbit-tasks-${npm_package_version}.vsix'",
+    "vsce-reinst": "npm run vsce-uninst && npm run vsce-restart && npm run vsce-inst"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.9",

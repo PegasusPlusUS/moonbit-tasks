@@ -332,3 +332,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120702
 
 - Responsive update.
+
+### 0.12.2024120902
+
+- File status in repo

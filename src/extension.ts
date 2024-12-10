@@ -463,6 +463,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         return new vscode.ThemeIcon(iconId);
     }
 
+    // Add status icon mapping
+    statusIconMap: { [key: string]: { icon: string, label: string } } = {
+        'modified': { icon: 'M', label: 'Modified' },
+        'added': { icon: 'A', label: 'Added' },
+        'deleted': { icon: 'D', label: 'Deleted' },
+        'renamed': { icon: 'R', label: 'Renamed' },
+        'copied': { icon: 'C', label: 'Copied' },
+        'untracked': { icon: 'U', label: 'Untracked' },
+        'ignored': { icon: 'I', label: 'Ignored' },
+        'index-modified': { icon: 'M', label: 'Modified' },
+        'index-added': { icon: 'A', label: 'Added' },
+        'index-deleted': { icon: 'D', label: 'Deleted' },
+        'index-renamed': { icon: 'R', label: 'Renamed' },
+        'index-copied': { icon: 'C', label: 'Copied' }
+    };
+
+    // In your HTML template, add CSS for status indicators
     private _getHtmlContent(webview: vscode.Webview): string {
         // Get path to codicons.css
         const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(
@@ -492,6 +509,27 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             flex-direction: column;
                             height: 100vh;
                             gap: 12px;
+                        }
+
+                        .git-status {
+                            display: inline-block;
+                            width: 16px;
+                            margin-right: 8px;
+                            color: var(--vscode-gitDecoration-modifiedResourceForeground);
+                            font-family: monospace;
+                            font-weight: bold;
+                        }
+                        
+                        .git-status.modified { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+                        .git-status.added { color: var(--vscode-gitDecoration-addedResourceForeground); }
+                        .git-status.deleted { color: var(--vscode-gitDecoration-deletedResourceForeground); }
+                        .git-status.renamed { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+                        .git-status.untracked { color: var(--vscode-gitDecoration-untrackedResourceForeground); }
+                        
+                        .tree-item {
+                            display: flex;
+                            align-items: center;
+                            padding: 4px 8px;
                         }
 
                         .git-panel, .smart-tasks-panel {
@@ -891,7 +929,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                     <script>
                         const vscode = acquireVsCodeApi();
-
+                        let statusIconMap = {};
                         function showError(message) {
                             const statusArea = document.getElementById('statusArea');
                             statusArea.textContent = message;
@@ -938,6 +976,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     updateSmartTasksTreeView(message.projectName, message.iconUri, message.items);
                                     break;
                                 case 'gitChanges':
+                                    statusIconMap = message.statusIconMap;
                                     updateGitChangesFileTree(message.changes);
                                     updateGitButtonStates(
                                         message.hasStagedChanges,
@@ -1037,6 +1076,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 
                             // Render unstaged changes
                             changesTree.innerHTML = unstagedChanges.map(file => {
+                                //const status = statusIconMap[file.status] || { icon: '?', label: 'Unknown' };
                                 const fileName = getFileName(file.path);
                                 return \`
                                     <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)">
@@ -1047,21 +1087,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                             <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
                                             <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
                                         </div>
+                                        <span class="git-status \${file.status}" title="\${file.status}">\${file.status}</span>
                                     </div>
                                 \`;
                             }).join('');
 
                             // Render staged changes
                             stagedTree.innerHTML = stagedChanges.map(file => {
+                                //const status = statusIconMap[file.status] || { icon: '?', label: 'Unknown' };
                                 const fileName = getFileName(file.path);
                                 return \`
                                     <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)">
                                         <span class="file-name">\${fileName}</span>
-                                        <div class="tooltip">\${file.path}</div>
+                                        <div class="tooltip">\${file.path + (file.rename.length > 0 ? ' renamed ' + file.rename:'')}</div>
                                         <div class="file-actions">
                                             <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Changes">🔍</button>
                                             <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
                                         </div>
+                                        <span class="git-status \${file.status}" title="\${file.status}">\${file.status}</span>
                                     </div>
                                 \`;
                             }).join('');
@@ -1559,6 +1602,35 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     public async getGitChanges(webview: vscode.Webview) {
+        enum GitStatusCode {
+            MinCode,
+
+            IndexModified = 0,
+            IndexAdded = 1,
+            IndexDeleted = 2,
+            IndexRenamed = 3,
+            IndexCopied = 4,
+
+            Modified = 5,
+            Deleted = 6,
+            Untracked = 7,
+            Ignored,
+            IntentToAdd,
+            IntentToRename,
+
+            TypeChanged,
+
+            AddedByUs,
+            AddedByThem,
+            DeletedByUs,
+            DeletedByThem,
+            BothAdded,
+            BothDeleted,
+            BothModified,
+
+            MaxCode
+        }
+
         try {
             const git = await this.getGitAPI(webview);
             if (!git?.repositories?.length) {
@@ -1628,16 +1700,47 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             );
 
             //console.log('Processed branches:', branches); // Debug log
+            function getStatusMessage(statusCode: any): string {
+                if (typeof statusCode === 'number') {
+                    if (GitStatusCode.MinCode <= statusCode && statusCode < GitStatusCode.MaxCode) {
+                        return GitStatusCode[statusCode];
+                    }
+                }
+                return `Invalid status: ${typeof statusCode} ${statusCode}`;
+            }
 
-            const workingChanges = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: string }) => ({
+            interface changeItem {
+                path: string;
+                originalUri: vscode.Uri;
+                renameUri: vscode.Uri | undefined;
+                status: GitStatusCode;
+            }
+
+            interface workingChange {
+                path: string,
+                //originalUri: vscode.Uri,
+                status: string,
+                staged: boolean
+            }
+            const workingChanges: workingChange[] = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: GitStatusCode; originalUri: vscode.Uri }) => ({
                 path: change.uri.fsPath,
-                status: change.status,
+                //originalUri: change.originalUri,
+                status: getStatusMessage(change.status),
                 staged: false
             }));
 
-            const stagedChanges = state.indexChanges.map((change: { uri: vscode.Uri; status: string }) => ({
+            interface stageChange {
+                path: string,
+                //originalUri: vscode.Uri,
+                rename: string,
+                status: string,
+                staged: boolean
+            }
+            const stagedChanges: stageChange[] = state.indexChanges.map((change: { uri: vscode.Uri; status: GitStatusCode; renameUri?: vscode.Uri, originalUri : vscode.Uri }) => ({
                 path: change.uri.fsPath,
-                status: change.status,
+                //originalUri: change.originalUri,
+                rename: change.renameUri ? 'from ' + path.basename(change.originalUri.fsPath):'',
+                status: getStatusMessage(change.status),
                 staged: true
             }));
 
@@ -1656,10 +1759,22 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             this.watchFileSystemChangeForCurrentRepository(repo, webview);
 
             this.updateSmartTasksTreeView(webview);
-
+            if (workingChanges.length > 0) {
+                console.log(`[${logTimeStamp()}] workingChanges: `);
+                workingChanges.forEach(workingChange => {
+                    console.log(`:${workingChange.path} ${workingChange.status} ${workingChange.status}`);
+                });
+            }
+            if (stagedChanges.length > 0) {
+                console.log(`[${logTimeStamp()}] stagedChanges:`);
+                stagedChanges.forEach(stagedChange => {
+                    console.log(`:${stagedChange.path} ${stagedChange.status} ${stagedChange.status} ${stagedChange.rename}`);
+                });
+            }
             webview.postMessage({
                 type: 'gitChanges',
                 changes: allChanges,
+                statusMap: this.statusIconMap,
                 repositories: repositories,
                 branches: branches,
                 currentRepo: repo.rootUri.path,
@@ -1745,7 +1860,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     hasChangesToDetect: boolean = false;
-    private async watchFileSystemChangeForCurrentRepository(repo: any, webview: vscode.Webview) {
+    private watchFileSystemChangeForCurrentRepository(repo: any, webview: vscode.Webview) {
         if (repo) {
             const watchedDir = mbTaskExt.convertGitPathForWindowsPath(repo.rootUri.path);
             if (watchedDir !== this.watchedDir) {

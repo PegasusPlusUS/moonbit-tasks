@@ -226,6 +226,7 @@ async function asyncInitLangDef() {
 				['Update', 'npm update'],
 				['Npm-publish', 'npm publish'],
 				['VSCE-Package', 'vsce package'],
+				['VSCE-Reinstall', 'vsce package; npm run vsce-reinst'],
 				['VSCE-Publish', 'vsce publish']
 			]), 'file_type_npm.svg')],
 			['TypeScript', new handlerInfo('tsconfig.json', new Map([
