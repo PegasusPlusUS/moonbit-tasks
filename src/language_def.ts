@@ -209,7 +209,7 @@ async function asyncInitLangDef() {
                 },
                 { command: 'Package', shellCmd: 'moon package',
                     subcommands: [
-                        { command: 'DList', shellCmd: 'moon package --list' },
+                        { command: 'List', shellCmd: 'moon package --list' },
                     ]
                 },
                 { command: 'Publish', shellCmd: 'moon publish' },
