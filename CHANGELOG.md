@@ -264,3 +264,8 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 ## 0.12.2024120904
 
 - File status one letter mark
+
+## 0.12.2024121001
+
+- Project Tasks submenu
+

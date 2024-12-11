@@ -43,7 +43,7 @@ export function convertGitPathForWindowsPath(gitPath: string): string {
 }
 
 export let smartTasksRootTitle = "No active document";
-export let smartCommandEntries:Array<[command:string, shellcmd:string]> = [];
+export let smartCommandEntries:Array<langDef.CommandItem> = [];
 export let smartProjectIconUri:string = "";
 export let smartTasksDir:string = "";
 export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: string) {
@@ -53,7 +53,7 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
 
     console.log(`[${logTimeStamp()}] ${smartTasksRootTitle}`);
     vscode.commands.executeCommand('moonbit-tasks.updateSmartTasksTreeView', []);
-    
+
     let result = await asyncDetectProjectForDocumentOrDirectory(documentPathOrDir);
     console.log(`[${logTimeStamp()}] Detect result ${result?(result.langID + ' at ' + result.rootPath):''}`);
 
@@ -62,7 +62,7 @@ export async function asyncRefereshSmartTasksDataProvider(documentPathOrDir: str
     } else if (undefined === result.handler.commands) {
         smartTasksRootTitle = "No commands found in signature";
     } else {
-        smartCommandEntries = Array.from(result.handler.commands.entries());
+        smartCommandEntries = result.handler.commands;
         smartProjectIconUri = result.handler.icon;
         smartTasksDir = result.rootPath ? result.rootPath : "";
     }

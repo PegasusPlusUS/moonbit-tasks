@@ -3,7 +3,7 @@
   "displayName": "Moonbit Tasks",
   "description": "Add smart tasks for moonbit and other project",
   "publisher": "PegasusCadence",
-  "version": "0.12.2024120904",
+  "version": "0.12.2024121001",
   "icon": "images/extension-icon.png",
   "engines": {
     "vscode": "^1.80.0"

@@ -10,7 +10,7 @@ let extensionContext: vscode.ExtensionContext | undefined; // Store context for 
 
 export function activate(context: vscode.ExtensionContext) {
     extensionContext = context; // Save the context for later use
-	
+
 	asyncInitLangDef();
 }
 
@@ -75,13 +75,18 @@ function stopWatchingLangDefChanges() {
 /// Coverage-> Tarpaulin
 ///        GCov
 ///
+export type CommandItem = {
+  command: string;
+  shellCmd: string;
+  subcommands?: Array<CommandItem>;
+};
 //interface handlerInfo {
 export class handlerInfo {
 	signatureFilePattern: string;
-	commands: Map<string, string>;
+  commands: Array<CommandItem>;
 	icon: string;
 
-	constructor(sigFileName: string, commands: Map<string, string>, icon: string = "") {
+	constructor(sigFileName: string, commands: Array<CommandItem>, icon: string = "") {
 		this.signatureFilePattern = sigFileName;
 		this.commands = commands;
 		this.icon = icon;
@@ -98,14 +103,16 @@ export class handlerInfo {
 	toJSON(): object {
 		return {
 			signatureFileName: this.signatureFilePattern,
-			commands: Array.from(this.commands.entries())
+			commands: Array.from(this.commands.entries()),
+      icon: this.icon,
 		};
 	}
 
 	static fromJSON(json: any): handlerInfo {
 		return new handlerInfo(
 			json.signatureFileName,
-			new Map(json.commands)
+			json.commands,
+      json.icon,
 		);
 	}
 }
@@ -125,125 +132,146 @@ async function asyncInitLangDef() {
 	}
 
 	if (!helper.isValidMap(languageHandlerMap)) {
-		const myMap: Map<string, handlerInfo> = new Map([
-			['Moonbit', new handlerInfo('moon.mod.json', new Map([
-				['Build', 'moon build'],
-				['Check', 'moon check'],
-				['Run', 'moon run'],
-				['Test', 'moon test'],
-				['Coverage', 'moon test --enable-coverage; moon coverage report'],
-				['Clean', 'moon clean'],
-				['Format', 'moon fmt'],
-				['Doc', 'moon doc'],
-				['Package', 'moon package'],
-				['Publish', 'moon publish'],
-				['Update', 'moon update'],
-				['Upgrade', 'moon upgrade'],
-			]), 'extension-icon.png')],
-			['Rust', new handlerInfo('Cargo.toml', new Map([
-				['Build', 'cargo b'],
-				['Check', 'cargo c'],
-				['Run', 'cargo r'],
-				['Test','cargo t'],
-				['Format', 'cargo fmt'],
-				['Clippy', 'cargo clippy'],
-				['Coverage','cargo tarpaulin'],
-				//['GCov', 'cargo gcov'],
-				['Benchmark', 'cargo bench'],
-				['Doc', 'cargo d'],
-				['Clean', 'cargo clean'],
-				['Update', 'cargo update'],
-				['Publish', 'cargo publish'],
-				['Upgrade', 'rustup upgrade'],
-			]), 'file_type_rust_toolchain.svg')],
-			['Nim', new handlerInfo('*.nimble', new Map([
-				['Build', 'nimble build'],
-				['Check', 'nimble check'],
-				['Test', 'nimble test'],
-				['Run', 'nimble run'],
-				// CMD
-				// ['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
-				// Bash
-				['Format', "find . -type f -name '*.nim' -exec nimpretty --backup:off {} \\;"],
-				['Suggest', 'nimsuggest'],
-				["Coverage", "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests"],
-				['Clean', 'nimble clean'],
-			]), 'file_type_nimble.svg')],
-			['Cangjie', new handlerInfo('cjpm.toml', new Map([
-				['Build', 'cjpm build'],
-				['Check', 'cjpm check'],
-				['Run', 'cjpm run'],
-				['Test', 'cjpm test'],
-				['Bench', 'cjpm bench'],
-				['Clean', 'cjpm clean'],
-			]), 'file_type_xcode.svg')],
-			['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
-				['Build', 'zig build'],
-				['Run', 'zig build run'],
-				['Test', 'zig build test'],
-				['Format', "find . -type f -name '*.zig' -exec zig fmt {} \\;"],
-				['Zen', 'zig zen'],
-			]), 'file_type_zig.svg')],
-			['Gleam', new handlerInfo('gleam.toml', new Map([
-				['Build', 'gleam build'],
-				['Run', 'gleam run'],
-				['Check', 'gleam check'],
-				['Clean', 'gleam clean'],
-				['Format', 'gleam format'],
-				['Docs', 'gleam docs'],
-				['Fix', 'gleam fix'],
-				['Publish', 'gleam publish'],
-				['Update', 'gleam update'],
-				['Shell', 'gleam shell'],
-			]), 'file_type_gleam.svg')],
-			['Go', new handlerInfo('go.mod', new Map([
-				['Build', 'go build'],
-				['Run', 'go run'],
-				['Test', 'go test'],
-				['Doc', 'go doc'],
-				['Clean', 'go clean'],
-				['Fix', 'go fix'],
-				['Format', 'go format'],
-			]), 'file_type_go_fuchsia.svg')],
-			['Wa', new handlerInfo('wa.mod', new Map([
-				['Build', 'wa build'],
-				['Run', 'wa run'],
-				['Test', 'wa test'],
-			]), 'file_type_wasm.svg')],
-			['Java', new handlerInfo('pom.xml', new Map([
-				['Build', 'mvn compile'],
-				['Run', 'mvn run'],
-				['Test', 'mvn test'],
-			]), 'file_type_java.svg')],
-			['Npm', new handlerInfo('package.json', new Map([
-				['Build', 'npm run compile'],
-				['Rebuild', 'npm rebuild'],
-				['Lint', 'npm run lint'],
-				['Test', 'npm test'],
-				['CI', 'npm ci'],
-				['Install-test', 'npm install-test'],
-				['Install-ci-test', 'npm install-ci-test'],
-				['Update', 'npm update'],
-				['Npm-publish', 'npm publish'],
-				['VSCE-Package', 'vsce package'],
-				['VSCE-Reinstall', 'vsce package; npm run vsce-reinst'],
-				['VSCE-Publish', 'vsce publish']
-			]), 'file_type_npm.svg')],
-			['TypeScript', new handlerInfo('tsconfig.json', new Map([
-				['Build', 'tsc build'],
-				['Run', 'tsc run'],
-				['Test', 'tsc test']
-			]), 'file_type_typescript_official.svg')],
-			['Swift', new handlerInfo('Package.swift', new Map([
-				['Build', 'swift build'],
-				['Run', 'swift run'],
-				['Test', 'swift test']
-			]), 'file_type_swift.svg')],
-			['C/C++/CMake', new handlerInfo('CMakeLists.txt', new Map([
-				['Build', 'cmake -S . -B .build && cmake --build .build'],
-				['Test', 'cmake --build .build && ctest --test-dir .build'],
-				['Run', 'cmake --build .build && ctest --test-dir .build && cmake run run']
-			]), 'folder_type_cmake.svg')]
+      const myMap: Map<string, handlerInfo> = new Map([
+        ['Moonbit', new handlerInfo('moon.mod.json', [
+                { command: 'Build', shellCmd: 'moon build' },
+                { command: 'Check', shellCmd: 'moon check' },
+                { command: 'Run', shellCmd: 'moon run' },
+                { command: 'Test', shellCmd: 'moon test' },
+                { command: 'Coverage', shellCmd: 'moon test --enable-coverage; moon coverage report' },
+                { command: 'Clean', shellCmd: 'moon clean' },
+                { command: 'Format', shellCmd: 'moon fmt' },
+                { command: 'Doc', shellCmd: 'moon doc' },
+                { command: 'Package', shellCmd: 'moon package' },
+                { command: 'Publish', shellCmd: 'moon publish' },
+                { command: 'Update', shellCmd: 'moon update' },
+                { command: 'Upgrade', shellCmd: 'moon upgrade' },
+            ],
+            'extension-icon.png')
+        ], ['Rust', new handlerInfo('Cargo.toml', [
+                { command: 'Build', shellCmd: 'cargo b',
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'cargo b --release' },
+                        { command: 'Locked', shellCmd: 'cargo b --locked'},
+                        { command: 'Offline', shellCmd: 'cargo b --offline'},
+                        { command: 'Frozen', shellCmd: 'cargo b --frozen'},
+                        { command: 'Clean', shellCmd: 'cargo clean' },
+                        { command: 'Publish', shellCmd: 'cargo publish' },
+                    ]
+                },
+                { command: 'Check', shellCmd: 'cargo c',
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'cargo c --release' },
+                        { command: 'Locked', shellCmd: 'cargo c --locked'},
+                        { command: 'Offline', shellCmd: 'cargo c --offline'},
+                        { command: 'Frozen', shellCmd: 'cargo c --frozen'},
+                        { command: 'Fmt', shellCmd: 'cargo fmt' },
+                        { command: 'Clippy', shellCmd: 'cargo clippy' },
+                    ]
+                },
+                { command: 'Run', shellCmd: 'cargo r' },
+                { command: 'Test', shellCmd: 'cargo t',
+                    subcommands: [
+                        { command: 'Coverage', shellCmd: 'cargo tarpaulin' },
+                        //['GCov', 'cargo gcov'],
+                        { command: 'Benchmark', shellCmd: 'cargo bench' },
+                    ]
+                },
+                { command: 'Doc', shellCmd: 'cargo d' },
+                { command: 'Update', shellCmd: 'cargo update' },
+                { command: 'Upgrade', shellCmd: 'rustup upgrade' },
+            ], 'file_type_rust_toolchain.svg')],
+        ['Nim', new handlerInfo('*.nimble', [
+                { command: 'Build', shellCmd: 'nimble build' },
+                { command: 'Check', shellCmd: 'nimble check' },
+                { command: 'Test', shellCmd: 'nimble test' },
+                { command: 'Run', shellCmd: 'nimble run' },
+                // CMD
+                // ['Format',"for /r %f in (*.nim) do ( nimpretty --backup:off %f )"],
+                // Bash
+                { command: 'Format', shellCmd: "find . -type f -name '*.nim' -exec nimpretty --backup:off {} \\;" },
+                { command: 'Suggest', shellCmd: 'nimsuggest' },
+                { command: "Coverage", shellCmd: "testament --backend:html --show-times --show-progress --compile-time-tools --nim:tests" },
+                { command: 'Clean', shellCmd: 'nimble clean' },
+            ], 'file_type_nimble.svg')],
+        ['Cangjie', new handlerInfo('cjpm.toml', [
+                { command: 'Build', shellCmd: 'cjpm build' },
+                { command: 'Check', shellCmd: 'cjpm check' },
+                { command: 'Run', shellCmd: 'cjpm run' },
+                { command: 'Test', shellCmd: 'cjpm test' },
+                { command: 'Bench', shellCmd: 'cjpm bench' },
+                { command: 'Clean', shellCmd: 'cjpm clean' },
+            ], 'file_type_xcode.svg')],
+        // ['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
+        // 	['Build', 'zig build'],
+        // 	['Run', 'zig build run'],
+        // 	['Test', 'zig build test'],
+        // 	['Format', "find . -type f -name '*.zig' -exec zig fmt {} \\;"],
+        // 	['Zen', 'zig zen'],
+        // ]), 'file_type_zig.svg')],
+        // ['Gleam', new handlerInfo('gleam.toml', new Map([
+        // 	['Build', 'gleam build'],
+        // 	['Run', 'gleam run'],
+        // 	['Check', 'gleam check'],
+        // 	['Clean', 'gleam clean'],
+        // 	['Format', 'gleam format'],
+        // 	['Docs', 'gleam docs'],
+        // 	['Fix', 'gleam fix'],
+        // 	['Publish', 'gleam publish'],
+        // 	['Update', 'gleam update'],
+        // 	['Shell', 'gleam shell'],
+        // ]), 'file_type_gleam.svg')],
+        // ['Go', new handlerInfo('go.mod', new Map([
+        // 	['Build', 'go build'],
+        // 	['Run', 'go run'],
+        // 	['Test', 'go test'],
+        // 	['Doc', 'go doc'],
+        // 	['Clean', 'go clean'],
+        // 	['Fix', 'go fix'],
+        // 	['Format', 'go format'],
+        // ]), 'file_type_go_fuchsia.svg')],
+        // ['Wa', new handlerInfo('wa.mod', new Map([
+        // 	['Build', 'wa build'],
+        // 	['Run', 'wa run'],
+        // 	['Test', 'wa test'],
+        // ]), 'file_type_wasm.svg')],
+        // ['Java', new handlerInfo('pom.xml', new Map([
+        // 	['Build', 'mvn compile'],
+        // 	['Run', 'mvn run'],
+        // 	['Test', 'mvn test'],
+        // ]), 'file_type_java.svg')],
+        ['Npm', new handlerInfo('package.json', [
+                { command: 'Build', shellCmd: 'npm run compile' },
+                { command: 'Rebuild', shellCmd: 'npm rebuild' },
+                { command: 'Lint', shellCmd: 'npm run lint' },
+                { command: 'Test', shellCmd: 'npm test' },
+                { command: 'CI', shellCmd: 'npm ci' },
+                { command: 'Install-test', shellCmd: 'npm install-test' },
+                { command: 'Install-ci-test', shellCmd: 'npm install-ci-test' },
+                { command: 'Update', shellCmd: 'npm update' },
+                { command: 'Npm-publish', shellCmd: 'npm publish' },
+                { command: 'VSCE-Package', shellCmd: 'vsce package',
+                  subcommands: [
+                    { command: 'Reinstall', shellCmd: 'vsce package; npm run vsce-reinst' },
+                    { command: 'Publish', shellCmd: 'vsce publish' }
+                  ]
+                },
+            ], 'file_type_npm.svg')],
+        // ['TypeScript', new handlerInfo('tsconfig.json', new Map([
+        // 	['Build', 'tsc build'],
+        // 	['Run', 'tsc run'],
+        // 	['Test', 'tsc test']
+        // ]), 'file_type_typescript_official.svg')],
+        ['Swift', new handlerInfo('Package.swift', [
+                { command: 'Build', shellCmd: 'swift build' },
+                { command: 'Run', shellCmd: 'swift run' },
+                { command: 'Test', shellCmd: 'swift test' },
+            ], 'file_type_swift.svg')],
+        ['C/C++/CMake', new handlerInfo('CMakeLists.txt', [
+            { command: 'Build', shellCmd: 'cmake -S . -B .build && cmake --build .build' },
+            { command: 'Test', shellCmd: 'cmake --build .build && ctest --test-dir .build' },
+            { command: 'Run', shellCmd: 'cmake --build .build && ctest --test-dir .build && cmake run run' },
+        ], 'folder_type_cmake.svg')],
 		]);
 
 		myMap.forEach((value, key) => {

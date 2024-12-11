@@ -7,6 +7,7 @@ process.on('warning', (warning) => {
 });
 
 import * as mbTaskExt from './language_handler';
+import * as langDef from './language_def';
 import * as smartTaskExt from './smart_tasks_panel_provider';
 
 import * as vscode from 'vscode';
@@ -224,7 +225,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'commit':
                     if (data.message) {
-                        await this.gitCommit(data.message, webviewView.webview);
+                        this.gitCommit(data.message, webviewView.webview).catch((error) => {
+                          console.error(`[$logTimeStamp()] `, error);
+                        });
                     }
                     break;
                 case 'push':
@@ -235,7 +238,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'smartTasksTreeItemSelected':
                     // Execute the command when tree item is selected
-                    vscode.commands.executeCommand('moonbit-tasks.smartTasksTreeItemSelected', data.itemId, this);
+                    console.log(`[$logTimeStamp()] `, data);
+                    vscode.commands.executeCommand('moonbit-tasks.smartTasksTreeItemSelected', data.shellCmd, this);
                     break;
                 case 'unstage':
                     if (data.files) {
@@ -460,17 +464,55 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             font-family: monospace;
                             font-weight: bold;
                         }
-                        
+
                         .git-status.Modified { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
                         .git-status.Added { color: var(--vscode-gitDecoration-addedResourceForeground); }
                         .git-status.Deleted { color: var(--vscode-gitDecoration-deletedResourceForeground); }
                         .git-status.Renamed { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
                         .git-status.Untracked { color: var(--vscode-gitDecoration-untrackedResourceForeground); }
-                        
+
+                        /*.tree-item {*/
+                        /*    display: flex;*/
+                        /*    align-items: center;*/
+                        /*    padding: 4px 8px;*/
+                        /*}*/
+
+                        .tree-children {
+                            margin-left: 20px; /* Indent submenu items */
+                            border-left: 1px dashed #ccc; /* Optional visual indicator */
+                            padding-left: 10px;
+                        }
+
                         .tree-item {
                             display: flex;
                             align-items: center;
-                            padding: 4px 8px;
+                            justify-content: space-between;
+                            padding: 5px;
+                            border: 1px solid #ddd;
+                            margin: 2px 0;
+                        }
+
+                        .toggle-subcommands {
+                            background: none;
+                            border: none;
+                            cursor: pointer;
+                            font-size: 16px;
+                            color: #555;
+                            margin-left: auto;
+                        }
+
+                        .subcommands {
+                            margin-left: 20px;
+                            padding-left: 10px;
+                            border-left: 2px solid #ddd;
+                        }
+
+                        .hidden {
+                            display: none;
+                        }
+
+                        .tree-item-label {
+                            margin-left: 5px;
                         }
 
                         .git-panel, .smart-tasks-panel {
@@ -782,13 +824,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             width: 16px;
                             height: 16px;
                         }
-                            
+
                         .codicon {
                             font-family: codicon;
                             font-size: 16px;
                             line-height: 16px;
                         }
-                            
+
                         .action-button.has-updates {
                             color: var(--vscode-gitDecoration-untrackedResourceForeground);
                             font-weight: bold;
@@ -949,7 +991,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                         function updateGitButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
                             const commitMessage = document.getElementById('commitMessage');
-                            
+
                             if (commitMessage) {
                                 commitMessage.disabled = !hasStagedChanges;
                             }
@@ -958,7 +1000,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function getFileName(fullpath) {
                             return fullpath.split(/[\\\\/]/).pop();
                         }
-                        
+
                         function doubleEscape(str) {
                             return str.replace(/\\\\/g, '\\\\\\\\');
                         }
@@ -967,7 +1009,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const changesTree = document.getElementById('changesTree');
                             const stagedTree = document.getElementById('stagedTree');
                             const commitArea = document.querySelector('.commit-area');
-                            
+
                             // Separate changes into staged and unstaged
                             const unstagedChanges = changes.filter(file => !file.staged);
                             const stagedChanges = changes.filter(file => file.staged);
@@ -1012,7 +1054,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     commitArea.style.display = 'none';
                                 }
                             }
-                                
+
                             // Render unstaged changes
                             changesTree.innerHTML = unstagedChanges.map(file => {
                                 console.log("Unstaged changed file:", file);
@@ -1074,7 +1116,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     vscode.postMessage({ command: 'getChanges' });
                                 }, delay);
                             }
-                            
+
                             startInterval(1000);
                         })();
 
@@ -1082,7 +1124,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
                                 .map(cb => cb.getAttribute('data-file'));
                             if (checkedFiles.length > 0) {
-                                vscode.postMessage({ 
+                                vscode.postMessage({
                                     command: 'stage',
                                     files: checkedFiles
                                 });
@@ -1092,7 +1134,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function gitCommit() {
                             const message = document.getElementById('commitMessage').value;
                             if (message.trim()) {
-                                vscode.postMessage({ 
+                                vscode.postMessage({
                                     command: 'commit',
                                     message: message
                                 });
@@ -1113,8 +1155,34 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             vscode.postMessage({ command: 'getChanges' });
                         }
 
+                        function toggleSubmenu(element) {
+                            const childrenContainer = element.querySelector('.tree-children');
+                            if (childrenContainer) {
+                                childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                            }
+                        }
+
+                        // Update rendering logic to attach toggle:
+                        function renderTreeItems(items) {
+                            if (!items || !Array.isArray(items)) return '';
+
+                            return items.map(function(item) {
+                                const hasChildren = item.children && item.children.length > 0;
+                                const childrenHtml = hasChildren
+                                    ? \`<div class="tree-children">\${renderTreeItems(item.children)}</div>\`
+                                    : '';
+
+                                return \`
+                                    <div class="tree-item" data-id="\${item.shellCmd}" onclick="\${hasChildren ? 'toggleSubmenu(this)' : 'selectSmartTasksTreeItem(this)'}">
+                                        <span class="codicon \${item.icon}"></span>
+                                        <span class="tree-item-label">\${item.command}</span>
+                                        \${childrenHtml}
+                                    </div>
+                                \`;
+                            }).join('');
+                        }
+
                         function updateSmartTasksTreeView(projectName, projectIconUri, items) {
-                            console.log('updateSmartTasksTreeView called with:', projectName, projectIconUri, items);
                             const projectNameSpan = document.getElementById('projectNameSpan');
                             if (projectNameSpan) {
                                 projectNameSpan.innerHTML = projectName;
@@ -1132,41 +1200,74 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 treeView.innerHTML = '';
                                 return;
                             }
-                            
-                            const itemsHtml = items.map(function(item) {
+
+                            const itemsHtml = items.map(function (item) {
+                                const hasSubcommands = item.subcommands && item.subcommands.length > 0;
                                 return \`
-                                    <div class="tree-item" data-id="\${item.id}" onclick="selectSmartTasksTreeItem(this)">
+                                    <div class="tree-item" data-id="\${item.shellCmd}" onclick="executeTreeItemCommand(event, '\${item.shellCmd}')">
                                         <span class="codicon \${item.icon}"></span>
-                                        <span class="tree-item-label">\${item.label}</span>
+                                        <span class="tree-item-label">\${item.command}</span>
+                                        \${hasSubcommands ? \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${item.shellCmd}')">...</button>\` : ''}
+                                        \${hasSubcommands ? \`
+                                            <div class="subcommands hidden" id="subcommands-\${item.shellCmd}">
+                                                \${item.subcommands.map(sub => \`
+                                                    <div class="tree-item subcommand" data-id="\${sub.shellCmd}" onclick="executeTreeItemCommand(event, '\${sub.shellCmd}')">
+                                                        <span class="codicon \${sub.icon}"></span>
+                                                        <span class="tree-item-label">\${sub.command}</span>
+                                                    </div>
+                                                \`).join('')}
+                                            </div>
+                                        \` : ''}
                                     </div>
                                 \`;
                             }).join('');
-                            
+
                             treeView.innerHTML = itemsHtml;
                         }
 
+                        function toggleSubcommands(event, shellCmd) {
+                            event.stopPropagation(); // Prevent parent click event from firing
+                            const subcommandsContainer = document.getElementById(\`subcommands-\${shellCmd}\`);
+                            if (subcommandsContainer) {
+                                subcommandsContainer.classList.toggle('hidden');
+                            }
+                        }
+
+                        function executeTreeItemCommand(event, shellCmd) {
+                            // Ignore clicks on the toggle button
+                            if (event.target.classList.contains('toggle-subcommands')) return;
+
+                            console.log(\`Executing command: \${shellCmd}\`);
+
+                            vscode.postMessage({
+                                command: 'smartTasksTreeItemSelected',
+                                shellCmd: shellCmd
+                            });
+                        }
+
                         function selectSmartTasksTreeItem(element) {
+                            //console.log('selectSmartTasksTreeItem', element);
                             document.querySelectorAll('.tree-item.selected').forEach(item => {
                                 item.classList.remove('selected');
                             });
-                            
+
                             element.classList.add('selected');
-                            
+
                             vscode.postMessage({
                                 command: 'smartTasksTreeItemSelected',
-                                itemId: element.dataset.id
+                                shellCmd: element.dataset.id
                             });
                         }
 
                         function stageFile(filePath) {
-                            vscode.postMessage({ 
+                            vscode.postMessage({
                                 command: 'stage',
                                 files: [filePath]
                             });
                         }
 
                         function unstageFile(filePath) {
-                            vscode.postMessage({ 
+                            vscode.postMessage({
                                 command: 'unstage',
                                 files: [filePath]
                             });
@@ -1175,7 +1276,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function discardFile(filePath) {
                             showModal(
                                 () => {
-                                    vscode.postMessage({ 
+                                    vscode.postMessage({
                                         command: 'discard',
                                         files: [filePath]
                                     });
@@ -1195,8 +1296,8 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     repoSelect.style.display = 'none';
                                 } else {
                                     repoSelect.style.display = 'block';
-                                    repoSelect.innerHTML = repositories.map(repo => 
-                                        '<option value="' + repo.path + '" title="' + repo.path + '" ' + 
+                                    repoSelect.innerHTML = repositories.map(repo =>
+                                        '<option value="' + repo.path + '" title="' + repo.path + '" ' +
                                         (repo.path === currentRepo ? 'selected' : '') + '>' +
                                         repo.name +
                                         '</option>'
@@ -1214,10 +1315,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     branchIcon.style.display = 'block';
                                     // First check if current branch exists in the list
                                     const branchExists = branches.some(branch => branch.name === currentBranch);
-                                    
+
                                     branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
-                                        branches.map(branch => 
-                                            '<option value="' + branch.name + '" title="' + branch.tooltip + '"' + 
+                                        branches.map(branch =>
+                                            '<option value="' + branch.name + '" title="' + branch.tooltip + '"' +
                                             (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
                                             branch.name +
                                             '</option>'
@@ -1272,7 +1373,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
                                 .map(item => item.getAttribute('data-file'));
                             if (unstagedFiles.length > 0) {
-                                vscode.postMessage({ 
+                                vscode.postMessage({
                                     command: 'stage',
                                     files: unstagedFiles
                                 });
@@ -1284,7 +1385,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 .map(item => item.getAttribute('data-file'));
                             if (unstagedFiles.length > 0) {
                                 showModal(
-                                    () => vscode.postMessage({ 
+                                    () => vscode.postMessage({
                                         command: 'discard',
                                         files: unstagedFiles
                                     }),
@@ -1297,7 +1398,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const stagedFiles = Array.from(document.querySelectorAll('#stagedTree .file-item'))
                                 .map(item => item.getAttribute('data-file'));
                             if (stagedFiles.length > 0) {
-                                vscode.postMessage({ 
+                                vscode.postMessage({
                                     command: 'unstage',
                                     files: stagedFiles
                                 });
@@ -1307,7 +1408,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function viewAllChanges(isStaged) {
                             const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
                                 .map(item => item.getAttribute('data-file'));
-                            
+
                             vscode.postMessage({
                                 command: 'viewAllChanges',
                                 files: files,
@@ -1328,13 +1429,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 </body>
             </html>
         `;
-        // console.log('Begine HTML content:');
-        // let lines = htmlContent.split('\n');
-        // for (let i = 0; i < lines.length; i++) {
-        //     console.log(lines[i]);
-        // }
-        // console.log('End HTML content:');
-        // return htmlContent;
     }
 
     // Git command implementations
@@ -1802,17 +1896,33 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public updateSmartTasksTreeView(webview: vscode.Webview) {
         let treeItems;
         let projectName = '';
+
+        /**
+         * @param commandItems
+         */
+        type taskTreeItem = {
+            shellCmd: string;
+            command: string;
+            icon: string;
+            subcommands ?: Array<taskTreeItem>;
+        }
+
+        function langDefToTaskTreeItems(commandItems: Array<langDef.CommandItem> = mbTaskExt.smartCommandEntries) : Array<taskTreeItem> {
+            return commandItems ?.map(entry => ( {
+                shellCmd: entry.shellCmd,
+                command: entry.command,
+                icon: getTaskIcon(entry.command),
+                subcommands: entry.subcommands ? langDefToTaskTreeItems(entry.subcommands) : []
+            })) || [];
+        }
+
         if (mbTaskExt.smartCommandEntries.length === 0) {
-            treeItems = [
-                { id: '', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
-            ];
-        } else {
-            projectName = path.basename(mbTaskExt.smartTasksDir);
-            treeItems = mbTaskExt.smartCommandEntries.map(entry => ({
-                id: entry[1],
-                label: entry[0],
-                icon: getTaskIcon(entry[0])
-            }));
+              treeItems = [
+                  { id: '', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
+              ];
+          } else {
+              projectName = path.basename(mbTaskExt.smartTasksDir);
+              treeItems = langDefToTaskTreeItems();
         }
 
         const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(

@@ -344,3 +344,8 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024120904
 
 - File status one letter mark
+
+### 0.12.2024121001
+
+- Project Tasks submenu
+
