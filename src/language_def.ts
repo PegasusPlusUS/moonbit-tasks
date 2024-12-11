@@ -159,22 +159,30 @@ async function asyncInitLangDef() {
                         { command: 'Release', shellCmd: 'moon check --release' },
                         { command: 'Debug', shellCmd: 'moon check --debug' },
                     ]
-                }, { command: 'Run', shellCmd: 'moon run',
+                }, { command: 'Run', shellCmd: 'moon run src/main',
                     subcommands: [
-                        { command: 'Release', shellCmd: 'moon run --release',
+                        { command: 'Release', shellCmd: 'moon run src/main --release',
                             subcommands: [
-                                { command: 'Trace', shellCmd: 'moon run --release --trace' },
+                                { command: 'Trace', shellCmd: 'moon run src/main --release --trace' },
                             ]
-                        }, { command: 'Debug', shellCmd: 'moon run --debug',
+                        }, { command: 'Debug', shellCmd: 'moon run src/main --debug',
                             subcommands: [
-                                { command: 'Trace', shellCmd: 'moon run --debug --trace' },
+                                { command: 'Trace', shellCmd: 'moon run src/main --debug --trace' },
                             ]
-                        }, { command: 'Trace', shellCmd: 'moon run --trace' },
+                        }, { command: 'Trace', shellCmd: 'moon run src/main --trace' },
                     ]
                 }, { command: 'Test', shellCmd: 'moon test',
                     subcommands: [
-                        { command: 'Release', shellCmd: 'moon test --release' },
-                        { command: 'Debug', shellCmd: 'moon test --debug' },
+                        { command: 'Release', shellCmd: 'moon test --release', 
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon test --release --trace' },
+                            ]
+                        },
+                        { command: 'Debug', shellCmd: 'moon test --debug', 
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon test --debug --trace' },
+                            ]
+                        },
                         { command: 'Trace', shellCmd: 'moon test --trace' },
                         { command: 'Coverage', shellCmd: 'moon test --enable-coverage; moon coverage report' },
                         { command: 'Doc Test', shellCmd: 'moon test --doc' },
