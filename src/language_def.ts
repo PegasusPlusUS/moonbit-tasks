@@ -4,6 +4,7 @@ import { promises as fsPromises } from 'fs';
 import * as fs from 'fs';
 
 import * as helper from './helper';
+import { logTimeStamp } from './extension';
 
 let configChangeListener: vscode.Disposable | undefined;
 let extensionContext: vscode.ExtensionContext | undefined; // Store context for later use
@@ -134,18 +135,94 @@ async function asyncInitLangDef() {
 	if (!helper.isValidMap(languageHandlerMap)) {
       const myMap: Map<string, handlerInfo> = new Map([
         ['Moonbit', new handlerInfo('moon.mod.json', [
-                { command: 'Build', shellCmd: 'moon build' },
-                { command: 'Check', shellCmd: 'moon check' },
-                { command: 'Run', shellCmd: 'moon run' },
-                { command: 'Test', shellCmd: 'moon test' },
-                { command: 'Coverage', shellCmd: 'moon test --enable-coverage; moon coverage report' },
-                { command: 'Clean', shellCmd: 'moon clean' },
-                { command: 'Format', shellCmd: 'moon fmt' },
-                { command: 'Doc', shellCmd: 'moon doc' },
-                { command: 'Package', shellCmd: 'moon package' },
+                { command: 'Build', shellCmd: 'moon build', 
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'moon build --release',
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon build --release --trace' },
+                            ]
+                        },
+                        { command: 'Debug', shellCmd: 'moon build --debug',
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon build --debug --trace' },
+                            ]
+                        },
+                        { command: 'Trace', shellCmd: 'moon build --trace' },
+                        { command: 'Dry Run', shellCmd: 'moon build --dry-run' },
+                        { command: 'Build Graph', shellCmd: 'moon build --build-graph' },
+                        { command: 'Clean', shellCmd: 'moon clean',
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon clean --trace' },
+                            ]
+                        },
+                    ]
+                },
+                { command: 'Check', shellCmd: 'moon check',
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'moon check --release' },
+                        { command: 'Debug', shellCmd: 'moon check --debug' },
+                    ]
+                },
+                { command: 'Run', shellCmd: 'moon run',
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'moon run --release',
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon run --release --trace' },
+                            ]
+                        },
+                        { command: 'Debug', shellCmd: 'moon run --debug',
+                            subcommands: [
+                                { command: 'Trace', shellCmd: 'moon run --debug --trace' },
+                            ]
+                        },
+                        { command: 'Trace', shellCmd: 'moon run --trace' },
+                    ]
+                },
+                { command: 'Test', shellCmd: 'moon test',
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'moon test --release' },
+                        { command: 'Debug', shellCmd: 'moon test --debug' },
+                        { command: 'Trace', shellCmd: 'moon test --trace' },
+                        { command: 'Coverage', shellCmd: 'moon test --enable-coverage; moon coverage report' },
+                        { command: 'Doc Test', shellCmd: 'moon test --doc' },
+                    ]
+                },
+                { command: 'Format', shellCmd: 'moon fmt',
+                    subcommands: [
+                        { command: 'Check Only', shellCmd: 'moon fmt --check' },
+                        { command: 'BlockStyle True', shellCmd: 'moon fmt --block-style true',
+                            subcommands: [
+                                { command: 'Check Only', shellCmd: 'moon fmt --block-style true --check' },
+                            ]
+                        },
+                        { command: 'BlockStyle False', shellCmd: 'moon fmt --block-style false',
+                            subcommands: [
+                                { command: 'Check Only', shellCmd: 'moon fmt --block-style false --check' },
+                            ]
+                        },
+                    ]
+                },
+                { command: 'Doc', shellCmd: 'moon doc',
+                    subcommands: [
+                        { command: 'Serve', shellCmd: 'moon doc --serve -b 127.0.0.1 -p 3000' },
+                    ]
+                },
+                { command: 'Package', shellCmd: 'moon package',
+                    subcommands: [
+                        { command: 'DList', shellCmd: 'moon package --list' },
+                    ]
+                },
                 { command: 'Publish', shellCmd: 'moon publish' },
-                { command: 'Update', shellCmd: 'moon update' },
-                { command: 'Upgrade', shellCmd: 'moon upgrade' },
+                { command: 'Update', shellCmd: 'moon update',
+                    subcommands: [
+                        { command: 'Quiet', shellCmd: 'moon update --quiet' },
+                    ]
+                },
+                { command: 'Upgrade', shellCmd: 'moon upgrade',
+                    subcommands: [
+                        { command: 'Quiet', shellCmd: 'moon upgrade --quiet' },
+                    ]
+                },
             ],
             'extension-icon.png')
         ], ['Rust', new handlerInfo('Cargo.toml', [
@@ -202,44 +279,44 @@ async function asyncInitLangDef() {
                 { command: 'Bench', shellCmd: 'cjpm bench' },
                 { command: 'Clean', shellCmd: 'cjpm clean' },
             ], 'file_type_xcode.svg')],
-        // ['Zig', new handlerInfo('build.zig|build.zig.zon', new Map([
-        // 	['Build', 'zig build'],
-        // 	['Run', 'zig build run'],
-        // 	['Test', 'zig build test'],
-        // 	['Format', "find . -type f -name '*.zig' -exec zig fmt {} \\;"],
-        // 	['Zen', 'zig zen'],
-        // ]), 'file_type_zig.svg')],
-        // ['Gleam', new handlerInfo('gleam.toml', new Map([
-        // 	['Build', 'gleam build'],
-        // 	['Run', 'gleam run'],
-        // 	['Check', 'gleam check'],
-        // 	['Clean', 'gleam clean'],
-        // 	['Format', 'gleam format'],
-        // 	['Docs', 'gleam docs'],
-        // 	['Fix', 'gleam fix'],
-        // 	['Publish', 'gleam publish'],
-        // 	['Update', 'gleam update'],
-        // 	['Shell', 'gleam shell'],
-        // ]), 'file_type_gleam.svg')],
-        // ['Go', new handlerInfo('go.mod', new Map([
-        // 	['Build', 'go build'],
-        // 	['Run', 'go run'],
-        // 	['Test', 'go test'],
-        // 	['Doc', 'go doc'],
-        // 	['Clean', 'go clean'],
-        // 	['Fix', 'go fix'],
-        // 	['Format', 'go format'],
-        // ]), 'file_type_go_fuchsia.svg')],
-        // ['Wa', new handlerInfo('wa.mod', new Map([
-        // 	['Build', 'wa build'],
-        // 	['Run', 'wa run'],
-        // 	['Test', 'wa test'],
-        // ]), 'file_type_wasm.svg')],
-        // ['Java', new handlerInfo('pom.xml', new Map([
-        // 	['Build', 'mvn compile'],
-        // 	['Run', 'mvn run'],
-        // 	['Test', 'mvn test'],
-        // ]), 'file_type_java.svg')],
+        ['Zig', new handlerInfo('build.zig|build.zig.zon', [
+                { command: 'Build', shellCmd: 'zig build' },
+                { command: 'Run', shellCmd: 'zig build run' },
+                { command: 'Test', shellCmd: 'zig build test' },
+                { command: 'Format', shellCmd: "find . -type f -name '*.zig' -exec zig fmt {} \\;" },
+                { command: 'Zen', shellCmd: 'zig zen' },
+            ], 'file_type_zig.svg')],
+        ['Gleam', new handlerInfo('gleam.toml', [
+                { command: 'Build', shellCmd: 'gleam build' },
+                { command: 'Run', shellCmd: 'gleam run' },
+                { command: 'Check', shellCmd: 'gleam check' },
+                { command: 'Clean', shellCmd: 'gleam clean' },
+                { command: 'Format', shellCmd: 'gleam format' },
+                { command: 'Docs', shellCmd: 'gleam docs' },
+                { command: 'Fix', shellCmd: 'gleam fix' },
+                { command: 'Publish', shellCmd: 'gleam publish' },
+                { command: 'Update', shellCmd: 'gleam update' },
+                { command: 'Shell', shellCmd: 'gleam shell' },
+            ], 'file_type_gleam.svg')],
+        ['Go', new handlerInfo('go.mod', [
+                { command: 'Build', shellCmd: 'go build' },
+                { command: 'Run', shellCmd: 'go run' },
+                { command: 'Test', shellCmd: 'go test' },
+                { command: 'Doc', shellCmd: 'go doc' },
+                { command: 'Clean', shellCmd: 'go clean' },
+                { command: 'Fix', shellCmd: 'go fix' },
+                { command: 'Format', shellCmd: 'go format' },
+            ], 'file_type_go_fuchsia.svg')],
+        ['Wa', new handlerInfo('wa.mod', [
+                { command: 'Build', shellCmd: 'wa build' },
+                { command: 'Run', shellCmd: 'wa run' },
+                { command: 'Test', shellCmd: 'wa test' },
+            ], 'file_type_wasm.svg')],
+        ['Java', new handlerInfo('pom.xml', [
+                { command: 'Build', shellCmd: 'mvn compile' },
+                { command: 'Run', shellCmd: 'mvn run' },
+                { command: 'Test', shellCmd: 'mvn test' },
+            ], 'file_type_java.svg')],
         ['Npm', new handlerInfo('package.json', [
                 { command: 'Build', shellCmd: 'npm run compile' },
                 { command: 'Rebuild', shellCmd: 'npm rebuild' },
@@ -257,11 +334,11 @@ async function asyncInitLangDef() {
                   ]
                 },
             ], 'file_type_npm.svg')],
-        // ['TypeScript', new handlerInfo('tsconfig.json', new Map([
-        // 	['Build', 'tsc build'],
-        // 	['Run', 'tsc run'],
-        // 	['Test', 'tsc test']
-        // ]), 'file_type_typescript_official.svg')],
+        ['TypeScript', new handlerInfo('tsconfig.json', [
+                { command: 'Build', shellCmd: 'tsc build' },
+                { command: 'Run', shellCmd: 'tsc run' },
+                { command: 'Test', shellCmd: 'tsc test' }
+            ], 'file_type_typescript_official.svg')],
         ['Swift', new handlerInfo('Package.swift', [
                 { command: 'Build', shellCmd: 'swift build' },
                 { command: 'Run', shellCmd: 'swift run' },
@@ -278,7 +355,9 @@ async function asyncInitLangDef() {
 			languageHandlerMap.set(key, value);
 		});
 		// do not wait here
-		asyncSaveLangDef();
+		asyncSaveLangDef().catch((error) => {
+            console.log(`[${logTimeStamp()}] Save language definition failed: ${error}`);
+        });
 	}
 }
 
