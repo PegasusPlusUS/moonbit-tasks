@@ -249,7 +249,15 @@ async function asyncInitLangDef() {
                 { command: 'Run', shellCmd: 'cargo r' },
                 { command: 'Test', shellCmd: 'cargo t',
                     subcommands: [
-                        { command: 'Coverage', shellCmd: 'cargo tarpaulin' },
+                        { command: 'Coverage', shellCmd: 'cargo cov',
+							subcommands: [
+								{ command: 'Gcov', shellCmd: 'cargo gcov' },
+								{ command: 'Grcov', shellCmd: 'cargo grcov' },
+								{ command: 'Kcov', shellCmd: 'cargo kcov' },
+								{ command: 'LLVM-Cov', shellCmd: 'cargo llvm-cov' },
+								{ command: 'Tarpaulin', shellCmd: 'cargo tarpaulin' },
+							]
+						 },
                         //['GCov', 'cargo gcov'],
                         { command: 'Benchmark', shellCmd: 'cargo bench' },
                     ]
