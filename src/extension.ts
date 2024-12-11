@@ -1910,7 +1910,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
         if (mbTaskExt.smartCommandEntries.length === 0) {
               treeItems = [
-                  { id: '', label: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
+                  { shellCmd: '', command: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
               ];
           } else {
               projectName = path.basename(mbTaskExt.smartTasksDir);

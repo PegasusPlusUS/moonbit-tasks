@@ -349,8 +349,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Project Tasks submenu
 
-### 0.12.2024121002
+### 0.12.2024121003
 
 - Language definition update for submenu
-
 
