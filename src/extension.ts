@@ -486,7 +486,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .tree-item {
                             display: flex;
                             align-items: center;
-                            justify-content: space-between;
+                            justify-content: flex-start;
                             padding: 5px;
                             border: 1px solid #ddd;
                             margin: 2px 0;
@@ -496,9 +496,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             background: none;
                             border: none;
                             cursor: pointer;
-                            font-size: 16px;
+                            font-size: 12px;
                             color: #555;
-                            margin-left: auto;
+                            margin-right: 5px;
+                            width: 16px;
+                            text-align: center;
                         }
 
                         .subcommands {
@@ -834,6 +836,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .action-button.has-updates {
                             color: var(--vscode-gitDecoration-untrackedResourceForeground);
                             font-weight: bold;
+                        }
+
+                        /* Make sure nested subcommands follow the same style */
+                        .subcommands .tree-item {
+                            margin-left: 0;  /* Reset margin for nested items */
+                        }
+
+                        .subcommands .subcommands {
+                            margin-left: 20px;  /* Consistent indentation for all levels */
                         }
                     </style>
                 </head>
@@ -1174,6 +1185,25 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }).join('');
                         }
 
+                        // Helper function to recursively render menu items
+                        function renderMenuItem(item) {
+                            const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                            return \`
+                                <div class="tree-item" data-id="\${item.shellCmd}" onclick="executeTreeItemCommand(event, '\${item.shellCmd}')">
+                                    \${hasSubcommands ? 
+                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${item.shellCmd}')">></button>\` : 
+                                        '<span style="width: 16px;"></span>'}
+                                    <span class="codicon \${item.icon}"></span>
+                                    <span class="tree-item-label">\${item.command}</span>
+                                    \${hasSubcommands ? \`
+                                        <div class="subcommands hidden" id="subcommands-\${item.shellCmd}">
+                                            \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
+                                        </div>
+                                    \` : ''}
+                                </div>
+                            \`;
+                        }
+                            
                         function updateSmartTasksTreeView(projectName, projectIconUri, items) {
                             const projectNameSpan = document.getElementById('projectNameSpan');
                             if (projectNameSpan) {
@@ -1193,35 +1223,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 return;
                             }
 
-                            const itemsHtml = items.map(function (item) {
-                                const hasSubcommands = item.subcommands && item.subcommands.length > 0;
-                                return \`
-                                    <div class="tree-item" data-id="\${item.shellCmd}" onclick="executeTreeItemCommand(event, '\${item.shellCmd}')">
-                                        <span class="codicon \${item.icon}"></span>
-                                        <span class="tree-item-label">\${item.command}</span>
-                                        \${hasSubcommands ? \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${item.shellCmd}')">...</button>\` : ''}
-                                        \${hasSubcommands ? \`
-                                            <div class="subcommands hidden" id="subcommands-\${item.shellCmd}">
-                                                \${item.subcommands.map(sub => \`
-                                                    <div class="tree-item subcommand" data-id="\${sub.shellCmd}" onclick="executeTreeItemCommand(event, '\${sub.shellCmd}')">
-                                                        <span class="codicon \${sub.icon}"></span>
-                                                        <span class="tree-item-label">\${sub.command}</span>
-                                                    </div>
-                                                \`).join('')}
-                                            </div>
-                                        \` : ''}
-                                    </div>
-                                \`;
-                            }).join('');
-
+                            // Use the recursive helper function to render all items
+                            const itemsHtml = items.map(item => renderMenuItem(item)).join('');
                             treeView.innerHTML = itemsHtml;
                         }
 
                         function toggleSubcommands(event, shellCmd) {
                             event.stopPropagation(); // Prevent parent click event from firing
+                            const button = event.target;
                             const subcommandsContainer = document.getElementById(\`subcommands-\${shellCmd}\`);
                             if (subcommandsContainer) {
-                                subcommandsContainer.classList.toggle('hidden');
+                                const isHidden = subcommandsContainer.classList.toggle('hidden');
+                                button.textContent = isHidden ? '>' : 'v';  // Update the button text based on state
                             }
                         }
 
