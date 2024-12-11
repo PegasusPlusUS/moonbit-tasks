@@ -249,11 +249,11 @@ async function asyncInitLangDef() {
                 { command: 'Run', shellCmd: 'cargo r' },
                 { command: 'Test', shellCmd: 'cargo t',
                     subcommands: [
-                        { command: 'Coverage', shellCmd: 'cargo cov',
+                        { command: 'Coverage', shellCmd: 'cargo cov test',
 							subcommands: [
 								{ command: 'Gcov', shellCmd: 'cargo gcov' },
-								{ command: 'Grcov', shellCmd: 'cargo grcov' },
-								{ command: 'Kcov', shellCmd: 'cargo kcov' },
+								{ command: 'Grcov', shellCmd: 'grcov . --binary-path ./target/debug/ -s . -t html --branch --ignore-not-existing --ignore "*/tests/*" -o ./coverage/' },
+								{ command: 'Kcov', shellCmd: 'cargo b --test -g && kcov --include-path=. --exclude-path=tests target/cov_output/ target/debug/your_test_binary' },
 								{ command: 'LLVM-Cov', shellCmd: 'cargo llvm-cov' },
 								{ command: 'Tarpaulin', shellCmd: 'cargo tarpaulin' },
 							]
