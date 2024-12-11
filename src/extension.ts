@@ -838,67 +838,59 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </style>
                 </head>
                 <body>
-                    <!-- div class="panel-container" -->
-                        <!-- Git Source Control Panel -->
-                        <!-- div class="git-panel" -->
-                            <div class="section-header">
-                                <div class="header-controls">
-                                    <div class="dropdown-container">
-                                        <select id="repoSelect" display='none' class="select-control" title="Select Repository">
-                                            <!-- Repositories will be populated here -->
-                                        </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
-                                        <select id="branchSelect" display='none' class="select-control" title="Select Branch">
-                                            <!-- Branches will be populated here -->
-                                        </select>
-                                    </div>
-                                </div>
+                    <div class="section-header">
+                        <!-- div class="header-controls" -->
+                            <div class="dropdown-container">
+                                <select id="repoSelect" display='none' class="select-control" title="Select Repository">
+                                    <!-- Repositories will be populated here -->
+                                </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
+                                <select id="branchSelect" display='none' class="select-control" title="Select Branch">
+                                    <!-- Branches will be populated here -->
+                                </select>
                             </div>
+                        <!-- /div  -->
+                    </div>
 
-                            <!-- Changes section -->
-                            <div id="changesHeader" class="section-header">
-                                <span>Changes</span>
-                                <div class="file-actions">
-                                    <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
-                                    <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
-                                </div>
-                            </div>
-                            <div id="changesTree" class="file-tree">
-                                <!-- Changed files will be populated here -->
-                            </div>
+                    <!-- Changes section -->
+                    <div id="changesHeader" display='none' class="section-header">
+                        <span>Changes</span>
+                        <div class="file-actions">
+                            <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                            <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                        </div>
+                    </div>
+                    <div id="changesTree" display='none' class="file-tree">
+                        <!-- Changed files will be populated here -->
+                    </div>
 
-                            <!-- Staged section -->
-                            <div id="stagedHeader" class="section-header">
-                                <span>Staged Changes</span>
-                                <div class="file-actions">
-                                    <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
-                                </div>
-                            </div>
-                            <div id="stagedTree" class="file-tree">
-                                <!-- Staged files will be populated here -->
-                            </div>
+                    <!-- Staged section -->
+                    <div id="stagedHeader" display='none' class="section-header">
+                        <span>Staged Changes</span>
+                        <div class="file-actions">
+                            <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                        </div>
+                    </div>
+                    <div id="stagedTree" display='none' class="file-tree">
+                        <!-- Staged files will be populated here -->
+                    </div>
 
-                            <!-- Commit Area -->
-                            <div class="commit-area" display="none">
-                                <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
-                            </div>
-                        <!-- /div -->
+                    <!-- Commit Area -->
+                    <div class="commit-area" display="none">
+                        <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
+                    </div>
 
-                        <div id="statusMessage" class="status-message"></div>
+                    <div id="statusMessage" display='none' class="status-message"></div>
 
-                        <!-- Project Smart Tasks Tree View Panel -->
-                        <!-- div class="smart-tasks-panel" -->
-                            <div class="section-header">
-                                <img id="headerIcon" class="header-icon" src="${iconUri}" alt="Project Tasks"/>
-                                <span id="projectNameSpan"></span>
-                                <span> Project Tasks</span>
-                            </div>
-                            <div id="smartTasksTreeView" class="tree-view">
-                                <!-- Smart Tasks tree items will be populated here -->
-                            </div>
-                        <!-- /div -->
-                    <!-- /div -->
+                    <div class="section-header">
+                        <img id="headerIcon" class="header-icon" src="${iconUri}" alt="Project Tasks"/>
+                        <span id="projectNameSpan"></span>
+                        <span> Project Tasks</span>
+                    </div>
+                    <div id="smartTasksTreeView" display='none' class="tree-view">
+                        <!-- Smart Tasks tree items will be populated here -->
+                    </div>
 
-                    <div id="confirmModal" class="modal-overlay">
+                    <div id="confirmModal" display='none' class="modal-overlay">
                         <div class="modal">
                             <div id="modalContent" class="modal-content">
                                 Are you sure you want to discard changes in this file?
