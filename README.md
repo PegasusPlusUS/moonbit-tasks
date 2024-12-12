@@ -358,3 +358,7 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 - Refine submenu
 
 - Language definition update
+
+### 0.12.2024121102
+
+- Encode/Decode shellCmd to avoid conflict with JavaScript quotes.
