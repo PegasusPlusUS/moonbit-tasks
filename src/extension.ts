@@ -134,8 +134,9 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
     );
     // Register the tree item selected command
     context.subscriptions.push(
-        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async (shellcmd: any, view: vscode.Webview) => {
-            smartTaskExt.asyncSmartTaskRun(shellcmd, view);
+        vscode.commands.registerCommand('moonbit-tasks.smartTasksTreeItemSelected', async (encodedShellCmd: string, view: vscode.Webview) => {
+            const decodedShellCmd = decodeShellCmd(encodedShellCmd);
+            smartTaskExt.asyncSmartTaskRun(decodedShellCmd, view);
         })
     );
 
@@ -1188,22 +1189,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // Helper function to recursively render menu items
                         function renderMenuItem(item) {
                             const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                            const encodedCmd = encodeShellCmd(item.shellCmd);
                             return \`
-                                <div class="tree-item" data-id="\${item.shellCmd}" onclick="executeTreeItemCommand(event, '\${item.shellCmd}')">
+                                <div class="tree-item" data-id="\${encodedCmd}" onclick="executeTreeItemCommand(event, '\${encodedCmd}')">
                                     \${hasSubcommands ? 
-                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${item.shellCmd}')">></button>\` : 
+                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
                                         '<span style="width: 16px;"></span>'}
                                     <span class="codicon \${item.icon}"></span>
                                     <span class="tree-item-label">\${item.command}</span>
                                     \${hasSubcommands ? \`
-                                        <div class="subcommands hidden" id="subcommands-\${item.shellCmd}">
+                                        <div class="subcommands hidden" id="subcommands-\${encodedCmd}">
                                             \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
                                         </div>
                                     \` : ''}
                                 </div>
                             \`;
                         }
-                            
+
                         function updateSmartTasksTreeView(projectName, projectIconUri, items) {
                             const projectNameSpan = document.getElementById('projectNameSpan');
                             if (projectNameSpan) {
@@ -1228,25 +1230,21 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             treeView.innerHTML = itemsHtml;
                         }
 
-                        function toggleSubcommands(event, shellCmd) {
-                            event.stopPropagation(); // Prevent parent click event from firing
+                        function toggleSubcommands(event, encodedCmd) {
+                            event.stopPropagation();
                             const button = event.target;
-                            const subcommandsContainer = document.getElementById(\`subcommands-\${shellCmd}\`);
+                            const subcommandsContainer = document.getElementById(\`subcommands-\${encodedCmd}\`);
                             if (subcommandsContainer) {
                                 const isHidden = subcommandsContainer.classList.toggle('hidden');
-                                button.textContent = isHidden ? '>' : 'v';  // Update the button text based on state
+                                button.textContent = isHidden ? '>' : 'v';
                             }
                         }
 
-                        function executeTreeItemCommand(event, shellCmd) {
-                            // Ignore clicks on the toggle button
-                            if (event.target.classList.contains('toggle-subcommands')) return;
-
-                            console.log(\`Executing command: \${shellCmd}\`);
-
+                        function executeTreeItemCommand(event, encodedCmd) {
+                            event.stopPropagation();
                             vscode.postMessage({
                                 command: 'smartTasksTreeItemSelected',
-                                shellCmd: shellCmd
+                                shellCmd: encodedCmd
                             });
                         }
 
@@ -1430,6 +1428,34 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         console.log(\`Script loaded\`);
+
+                        // Custom encode function to handle quotes
+                        function encodeShellCmd(cmd) {
+                            return cmd
+                                .replace(/'/g, '%27')  // Single quotes
+                                .replace(/"/g, '%22')  // Double quotes
+                                .replace(/\\\\/g, '%5C'); // Backslashes
+                        }
+
+                        // Update the renderMenuItem function to use encoded shellCmd
+                        function renderMenuItem(item) {
+                            const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                            const encodedCmd = encodeShellCmd(item.shellCmd);
+                            return \`
+                                <div class="tree-item" data-id="\${encodedCmd}" onclick="executeTreeItemCommand(event, '\${encodedCmd}')">
+                                    \${hasSubcommands ? 
+                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
+                                        '<span style="width: 16px;"></span>'}
+                                    <span class="codicon \${item.icon}"></span>
+                                    <span class="tree-item-label">\${item.command}</span>
+                                    \${hasSubcommands ? \`
+                                        <div class="subcommands hidden" id="subcommands-\${encodedCmd}">
+                                            \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
+                                        </div>
+                                    \` : ''}
+                                </div>
+                            \`;
+                        }
                     </script>
                 </body>
             </html>
@@ -1998,4 +2024,12 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public dispose() {
         this.fileSystemWatcher?.dispose();
     }
+}
+
+// Add custom decode function in TypeScript side
+function decodeShellCmd(encodedCmd: string): string {
+    return encodedCmd
+        .replace(/%27/g, "'")  // Single quotes
+        .replace(/%22/g, '"')  // Double quotes
+        .replace(/%5C/g, '\\'); // Backslashes
 }
