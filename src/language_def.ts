@@ -278,10 +278,50 @@ async function asyncInitLangDef() {
                 { command: 'Clean', shellCmd: 'cjpm clean' },
             ], 'file_type_xcode.svg')],
             ['Zig', new handlerInfo('build.zig|build.zig.zon', [
-                { command: 'Build', shellCmd: 'zig build' },
-                { command: 'Run', shellCmd: 'zig build run' },
-                { command: 'Test', shellCmd: 'zig build test' },
-                { command: 'Format', shellCmd: "find . -type f -name '*.zig' -exec zig fmt {} \\;" },
+                { command: 'Build', shellCmd: 'zig build', 
+                    subcommands: [
+                        { command: 'Release', shellCmd: 'zig build --release', 
+                            subcommands: [
+                                { command: 'Fast', shellCmd: 'zig build --release=fast' },
+                                { command: 'Safe', shellCmd: 'zig build --release=safe' },
+                                { command: 'Small', shellCmd: 'zig build --release=small' },
+                            ]
+                        }
+                    ]
+                },
+                { command: 'Run', shellCmd: 'zig build run',
+                    subcommands: [
+                        { command: 'On Darling', shellCmd: 'zig build run -fdarling'},
+                        { command: 'On QEMU', shellCmd: 'zig build run -fqemu'},
+                        { command: 'On Rosetta', shellCmd: 'zig build run -frosetta'},
+                        { command: 'On WASMtime', shellCmd: 'zig build run -fwasmtime'},
+                        { command: 'On Wine', shellCmd: 'zig build run -fwine'},
+                    ]
+                },
+                { command: 'Test', shellCmd: 'zig build test',
+                    subcommands: [
+                        { command: 'On Darling', shellCmd: 'zig build test -fdarling'},
+                        { command: 'On QEMU', shellCmd: 'zig build test -fqemu'},
+                        { command: 'On Rosetta', shellCmd: 'zig build test -frosetta'},
+                        { command: 'On WASMtime', shellCmd: 'zig build test -fwasmtime'},
+                        { command: 'On Wine', shellCmd: 'zig build test -fwine'},
+                        { command: 'TestX', shellCmd: 'zig build testx', 
+                            subcommands: [
+                                { command: 'On Darling', shellCmd: 'zig build testx -fdarling'},
+                                { command: 'On QEMU', shellCmd: 'zig build testx -fqemu'},
+                                { command: 'On Rosetta', shellCmd: 'zig build testx -frosetta'},
+                                { command: 'On WASMtime', shellCmd: 'zig build testx -fwasmtime'},
+                                { command: 'On Wine', shellCmd: 'zig build testx -fwine'},
+                            ]
+                        },                      
+                    ]
+                 },
+                { command: 'Format', shellCmd: "find . -type f -name '*.zig' -exec zig fmt {} \\;",
+                    subcommands: [
+                        { command: 'Check', shellCmd: "find . -type f -name '*.zig' -exec zig fmt --check {} \\;" },
+                        { command: 'AST-Check', shellCmd: "find . -type f -name '*.zig' -exec zig fmt --ast-check {} \\;" },
+                    ]
+                },
                 { command: 'Zen', shellCmd: 'zig zen' },
             ], 'file_type_zig.svg')],
             ['Gleam', new handlerInfo('gleam.toml', [

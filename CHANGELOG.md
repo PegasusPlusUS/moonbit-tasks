@@ -273,6 +273,8 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 
 - Language definition update for submenu
 
-## 0.12.2024120201
+## 0.12.2024121101
 
 - Refine submenu
+
+- Language definition update

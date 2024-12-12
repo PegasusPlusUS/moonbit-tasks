@@ -353,6 +353,8 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 
 - Language definition update for submenu
 
-### 0.12.2024120201
+### 0.12.2024121101
 
 - Refine submenu
+
+- Language definition update
