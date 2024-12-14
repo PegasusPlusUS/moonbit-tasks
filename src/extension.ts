@@ -1291,48 +1291,35 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
                             const repoSelect = document.getElementById('repoSelect');
                             const branchSelect = document.getElementById('branchSelect');
-                            const branchIcon = document.getElementById('branchIcon');
 
-                            // Update repository list visibility
+                            // Update repository list
                             if (repoSelect) {
-                                if (repositories.length < 1) {
-                                    repoSelect.style.display = 'none';
-                                } else {
-                                    repoSelect.style.display = 'block';
-                                    repoSelect.innerHTML = repositories.map(repo =>
-                                        '<option value="' + repo.path + '" title="' + repo.path + '" ' +
-                                        (repo.path === currentRepo ? 'selected' : '') + '>' +
-                                        repo.name +
-                                        '</option>'
-                                    ).join('');
-                                }
+                                repoSelect.innerHTML = repositories.map(repo => 
+                                    '<option value="' + repo.path + '" title="' + repo.path + ' -> ' + (repo.originUri || 'None') + '" ' + 
+                                    (repo.path === currentRepo ? 'selected' : '') + '>' +
+                                    repo.name +
+                                    '</option>'
+                                ).join('');
                             }
 
                             // Update branch list
-                            if (branchSelect && branchIcon) {
-                                if (repositories.length < 1) {
-                                    branchSelect.style.display = 'none';
-                                    branchIcon.style.display = 'none';
+                            if (branchSelect) {
+                                // First check if current branch exists in the list
+                                const branchExists = branches.some(branch => branch.name === currentBranch);
+                                
+                                branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>Select Branch</option>' +
+                                    branches.map(branch => 
+                                        '<option value="' + branch.name + '" ' + 
+                                        (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
+                                        branch.name +
+                                        '</option>'
+                                    ).join('');
+
+                                // Add or remove the no-branch-selected class based on selection
+                                if (!branchExists) {
+                                    branchSelect.classList.add('no-branch-selected');
                                 } else {
-                                    branchSelect.style.display = 'block';
-                                    branchIcon.style.display = 'block';
-                                    // First check if current branch exists in the list
-                                    const branchExists = branches.some(branch => branch.name === currentBranch);
-
-                                    branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>HEAD detached</option>' +
-                                        branches.map(branch =>
-                                            '<option value="' + branch.name + '" title="' + branch.tooltip + '"' +
-                                            (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
-                                            branch.name +
-                                            '</option>'
-                                        ).join('');
-
-                                    // Add or remove the no-branch-selected class based on selection
-                                    if (!branchExists) {
-                                        branchSelect.classList.add('no-branch-selected');
-                                    } else {
-                                        branchSelect.classList.remove('no-branch-selected');
-                                    }
+                                    branchSelect.classList.remove('no-branch-selected');
                                 }
                             }
                         }
