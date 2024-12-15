@@ -593,11 +593,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .file-actions {
-                            display: none;
-                            position: absolute;
-                            right: 32px;
-                            top: 50%;
-                            transform: translateY(-50%);
+                            display: flex;
+                            align-items: center;
+                            gap: 4px;
                         }
 
                         .file-item:hover .file-actions {
@@ -923,6 +921,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .tasks-status.has-error {
                             color: var(--vscode-errorForeground);
                         }
+
+                        .file-tree.hidden {
+                            display: none !important;
+                        }
                     </style>
                 </head>
                 <body>
@@ -941,25 +943,33 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <!-- Changes section -->
-                    <div id="changesHeader" display='none' class="section-header">
-                        <span>Changes</span>
+                    <div id="changesHeader" class="section-header" onclick="toggleChanges()">
+                        <div class="header-content">
+                            <span>Changes</span>
+                        </div>
                         <div class="file-actions">
+                            <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
                             <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
                             <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                            <button class="toggle-subcommands">></button>
                         </div>
                     </div>
-                    <div id="changesTree" display='none' class="file-tree">
+                    <div id="changesTree" class="file-tree">
                         <!-- Changed files will be populated here -->
                     </div>
 
                     <!-- Staged section -->
-                    <div id="stagedHeader" display='none' class="section-header">
-                        <span>Staged Changes</span>
+                    <div id="stagedHeader" class="section-header" onclick="toggleStaged()">
+                        <div class="header-content">
+                            <span>Staged Changes</span>
+                        </div>
                         <div class="file-actions">
+                            <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
                             <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                            <button class="toggle-subcommands">></button>
                         </div>
                     </div>
-                    <div id="stagedTree" display='none' class="file-tree">
+                    <div id="stagedTree" class="file-tree">
                         <!-- Staged files will be populated here -->
                     </div>
 
@@ -1138,16 +1148,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const stagedHeader = document.getElementById('stagedHeader');
                             if (stagedHeader) {
                                 if (stagedChanges.length > 0) {
-                                    stagedHeader.style.display = 'block';
+                                    stagedHeader.style.display = 'flex';
                                     stagedTree.style.display = 'block';
                                     commitArea.style.display = 'block';
-                                    stagedHeader.innerHTML = \`
-                                        <span>Staged Changes (\${stagedChanges.length})</span>
+                                    const headerContent = \`
+                                        <div class="header-content">
+                                            <span>Staged Changes (\${stagedChanges.length})</span>
+                                        </div>
                                         <div class="file-actions">
                                             <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
                                             <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                                            <button class="toggle-subcommands">\${stagedHidden ? '>' : 'v'}</button>
                                         </div>
                                     \`;
+                                    stagedHeader.innerHTML = headerContent;
+                                    // Restore hidden state if it was hidden
+                                    if (stagedHidden) {
+                                        stagedTree.classList.add('hidden');
+                                    }
                                 } else {
                                     stagedHeader.style.display = 'none';
                                     stagedTree.style.display = 'none';
@@ -1599,6 +1617,28 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function toggleProjectTasks() {
                             const treeView = document.getElementById('smartTasksTreeView');
                             const header = document.getElementById('projectTasksHeader');
+                            const toggleButton = header.querySelector('.toggle-subcommands');
+                            const isHidden = treeView.classList.toggle('hidden');
+                            toggleButton.textContent = isHidden ? '>' : 'v';
+                        }
+
+                        function toggleChanges(event) {
+                            if (event) {
+                                event.stopPropagation();
+                            }
+                            const treeView = document.getElementById('changesTree');
+                            const header = document.getElementById('changesHeader');
+                            const toggleButton = header.querySelector('.toggle-subcommands');
+                            const isHidden = treeView.classList.toggle('hidden');
+                            toggleButton.textContent = isHidden ? '>' : 'v';
+                        }
+
+                        function toggleStaged(event) {
+                            if (event) {
+                                event.stopPropagation();
+                            }
+                            const treeView = document.getElementById('stagedTree');
+                            const header = document.getElementById('stagedHeader');
                             const toggleButton = header.querySelector('.toggle-subcommands');
                             const isHidden = treeView.classList.toggle('hidden');
                             toggleButton.textContent = isHidden ? '>' : 'v';
