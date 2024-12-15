@@ -168,10 +168,18 @@ function registerGitTasksWebview(context: vscode.ExtensionContext) {
         // );
     }
     registerContextMenu(context);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('moonbit-tasks.refreshTodoTree', () => {
+            //tasksWebviewProvider.updateTodoTree();
+            gitTasksProvider.updateTodoTree();
+        })
+    );
 }
 
 class TasksWebviewProvider implements vscode.WebviewViewProvider {
-    public _webview?: vscode.Webview;  // Made public so command can access it
+    private _view?: vscode.WebviewView;  // Add this line
+    public _webview?: vscode.Webview;
     private fileSystemWatcher: vscode.FileSystemWatcher | undefined;
     private watchedDir: string = "";
 
@@ -188,6 +196,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        this._view = webviewView;  // Add this line
         this._webview = webviewView.webview;
         webviewView.webview.options = {
             enableScripts: true,
@@ -847,20 +856,60 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .subcommands .subcommands {
                             margin-left: 20px;  /* Consistent indentation for all levels */
                         }
+
+                        .view-toggle-button {
+                            background: none;
+                            border: none;
+                            cursor: pointer;
+                            padding: 4px 8px;
+                            color: var(--vscode-titleBar-activeForeground);
+                            opacity: 0.7;
+                        }
+                        
+                        .view-toggle-button:hover {
+                            opacity: 1;
+                        }
+
+                        .view-toggle-button.active {
+                            opacity: 1;
+                            background-color: var(--vscode-titleBar-activeBackground);
+                        }
+
+                        /* Styles for TODO tree view */
+                        .todo-tree {
+                            margin-top: 10px;
+                            padding: 5px;
+                        }
+
+                        .todo-item {
+                            display: flex;
+                            align-items: center;
+                            padding: 3px;
+                            margin: 2px 0;
+                        }
+
+                        .todo-tree.list-view .todo-item {
+                            margin-left: 0 !important;
+                        }
+
+                        .todo-tree.tree-view .todo-item {
+                            margin-left: 20px;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="section-header">
-                        <!-- div class="header-controls" -->
-                            <div class="dropdown-container">
-                                <select id="repoSelect" display='none' class="select-control" title="Select Repository">
-                                    <!-- Repositories will be populated here -->
-                                </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
-                                <select id="branchSelect" display='none' class="select-control" title="Select Branch">
-                                    <!-- Branches will be populated here -->
-                                </select>
-                            </div>
-                        <!-- /div  -->
+                    <div class="title-bar">
+                        <button id="viewToggleButton" class="view-toggle-button" onclick="toggleViewMode()" title="Toggle Tree/List View">
+                            🌳
+                        </button>
+                        <div class="dropdown-container">
+                            <select id="repoSelect" display='none' class="select-control" title="Select Repository">
+                                <!-- Repositories will be populated here -->
+                            </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
+                            <select id="branchSelect" display='none' class="select-control" title="Select Branch">
+                                <!-- Branches will be populated here -->
+                            </select>
+                        </div>
                     </div>
 
                     <!-- Changes section -->
@@ -911,6 +960,15 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 <button class="modal-button modal-button-secondary" onclick="closeModal()">Cancel</button>
                                 <button class="modal-button modal-button-primary" onclick="confirmModal()">Discard</button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="todo-tree tree-view" id="todoTreeView">
+                        <div class="section-header">
+                            <span>TODO Items</span>
+                        </div>
+                        <div id="todoItems">
+                            <!-- TODO items will be inserted here -->
                         </div>
                     </div>
 
@@ -981,6 +1039,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     break;
                                 case 'info':
                                     showMessage(message.message, 'info');
+                                    break;
+                                case 'updateTodoTree':
+                                    updateTodoTree(message.items);
                                     break;
                             }
                         });
@@ -1442,6 +1503,59 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     \` : ''}
                                 </div>
                             \`;
+                        }
+
+                        let isTreeView = true;
+                        function toggleViewMode() {
+                            isTreeView = !isTreeView;
+                            const todoTree = document.getElementById('todoTreeView');
+                            const button = document.getElementById('viewToggleButton');
+                            
+                            if (isTreeView) {
+                                todoTree.classList.remove('list-view');
+                                todoTree.classList.add('tree-view');
+                                button.textContent = '🌳';
+                            } else {
+                                todoTree.classList.remove('tree-view');
+                                todoTree.classList.add('list-view');
+                                button.textContent = '📝';
+                            }
+                            
+                            // Refresh the current view
+                            updateTodoTree(currentTodoItems);
+                        }
+
+                        let currentTodoItems = [];
+                        function updateTodoTree(items) {
+                            currentTodoItems = items;
+                            const todoItems = document.getElementById('todoItems');
+                            
+                            if (isTreeView) {
+                                // Render as tree
+                                todoItems.innerHTML = renderTodoTree(items);
+                            } else {
+                                // Render as list
+                                todoItems.innerHTML = renderTodoList(items);
+                            }
+                        }
+
+                        function renderTodoTree(items, level = 0) {
+                            return items.map(item => \`
+                                <div class="todo-item" style="margin-left: \${level * 20}px">
+                                    <span class="todo-icon">📌</span>
+                                    <span class="todo-text">\${item.text}</span>
+                                    \${item.children ? renderTodoTree(item.children, level + 1) : ''}
+                                </div>
+                            \`).join('');
+                        }
+
+                        function renderTodoList(items) {
+                            return items.map(item => \`
+                                <div class="todo-item">
+                                    <span class="todo-icon">📌</span>
+                                    <span class="todo-text">\${item.text}</span>
+                                </div>
+                            \`).join('');
                         }
                     </script>
                 </body>
@@ -2011,6 +2125,71 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public dispose() {
         this.fileSystemWatcher?.dispose();
     }
+
+    private async scanTodoItems(): Promise<TodoItem[]> {
+        const todos: TodoItem[] = [];
+        
+        // Get workspace files
+        const files = await vscode.workspace.findFiles('**/*.{ts,js,rs,moon,nim,zig,go,swift,java,cpp,c,h,hpp}');
+        
+        for (const file of files) {
+            const document = await vscode.workspace.openTextDocument(file);
+            const text = document.getText();
+            
+            // Simple regex for TODO comments
+            const todoRegex = /\/\/\s*TODO:?\s*(.+)$/gm;
+            let match;
+            
+            while ((match = todoRegex.exec(text)) !== null) {
+                todos.push({
+                    text: match[1].trim(),
+                    file: file.fsPath,
+                    line: document.positionAt(match.index).line + 1
+                });
+            }
+        }
+
+        return this.organizeTodos(todos);
+    }
+
+    private organizeTodos(todos: TodoItem[]): TodoItem[] {
+        // Group by file
+        const fileGroups = new Map<string, TodoItem[]>();
+        
+        todos.forEach(todo => {
+            const file = todo.file;
+            if (!fileGroups.has(file)) {
+                fileGroups.set(file, []);
+            }
+            fileGroups.get(file)?.push(todo);
+        });
+
+        // Convert to tree structure
+        return Array.from(fileGroups.entries()).map(([file, items]) => ({
+            text: path.basename(file),
+            file: file,
+            line: 0,
+            children: items
+        }));
+    }
+
+    public async updateTodoTree() {
+        if (this._view) {
+            const todos = await this.scanTodoItems();
+            this._view.webview.postMessage({
+                type: 'updateTodoTree',
+                items: todos
+            });
+        }
+    }
+
+    // Update the existing refresh method to include TODO scanning
+    public async refresh() {
+        if (this._view?.webview) {
+            await this.getGitChanges(this._view.webview);
+            await this.updateTodoTree();
+        }
+    }
 }
 
 // Add custom decode function in TypeScript side
@@ -2019,4 +2198,11 @@ function decodeShellCmd(encodedCmd: string): string {
         .replace(/%27/g, "'")  // Single quotes
         .replace(/%22/g, '"')  // Double quotes
         .replace(/%5C/g, '\\'); // Backslashes
+}
+
+interface TodoItem {
+    text: string;
+    file: string;
+    line: number;
+    children?: TodoItem[];
 }
