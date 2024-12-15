@@ -506,20 +506,23 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             background: none;
                             border: none;
                             cursor: pointer;
-                            font-size: 12px;
-                            color: #555;
-                            margin-right: 5px;
-                            width: 16px;
-                            text-align: center;
+                            padding: 2px 4px;
+                            color: var(--vscode-foreground);
+                            opacity: 0.8;
+                        }
+
+                        .toggle-subcommands:hover {
+                            opacity: 1;
                         }
 
                         .subcommands {
                             margin-left: 20px;
                             padding-left: 10px;
-                            border-left: 2px solid #ddd;
+                            border-left: 1px solid var(--vscode-widget-border);
+                            display: block;
                         }
 
-                        .hidden {
+                        .subcommands.hidden {
                             display: none;
                         }
 
@@ -546,17 +549,22 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             display: flex;
                             justify-content: space-between;
                             align-items: center;
-                            gap: 2px;
+                            cursor: pointer;
+                            user-select: none;
                         }
 
-                        .section-header .file-actions {
+                        .section-header:hover {
+                            background: var(--vscode-list-hoverBackground);
+                        }
+
+                        .header-content {
                             display: flex;
-                            gap: 2px;
-                            visibility: hidden;
+                            align-items: center;
+                            gap: 4px;
                         }
 
-                        .section-header:hover .file-actions {
-                            visibility: visible;
+                        .tree-view.hidden {
+                            display: none;
                         }
 
                         .file-tree {
@@ -895,6 +903,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .todo-tree.tree-view .todo-item {
                             margin-left: 20px;
                         }
+
+                        .header-status {
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        }
+
+                        .tasks-status {
+                            font-size: 0.9em;
+                            opacity: 0.8;
+                            color: var(--vscode-descriptionForeground);
+                        }
+
+                        .tasks-status.has-running {
+                            color: var(--vscode-progressBar-background);
+                        }
+
+                        .tasks-status.has-error {
+                            color: var(--vscode-errorForeground);
+                        }
                     </style>
                 </head>
                 <body>
@@ -942,12 +970,18 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                     <div id="statusMessage" display='none' class="status-message"></div>
 
-                    <div class="section-header">
-                        <img id="headerIcon" class="header-icon" src="${iconUri}" alt="Project Tasks"/>
-                        <span id="projectNameSpan"></span>
-                        <span> Project Tasks</span>
+                    <div class="section-header" id="projectTasksHeader" onclick="toggleProjectTasks()">
+                        <div class="header-content">
+                            <img id="headerIcon" class="header-icon" src="\${iconUri}" alt="Project Tasks"/>
+                            <span id="projectNameSpan"></span>
+                            <span> Project Tasks</span>
+                        </div>
+                        <div class="header-status">
+                            <span id="tasksStatus" class="tasks-status"></span>
+                            <button class="toggle-subcommands">></button>
+                        </div>
                     </div>
-                    <div id="smartTasksTreeView" display='none' class="tree-view">
+                    <div id="smartTasksTreeView" class="tree-view">
                         <!-- Smart Tasks tree items will be populated here -->
                     </div>
 
@@ -1018,6 +1052,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 case 'updateSmartTasksTree':
                                     smartTaskTreeUpdated = true;
                                     updateSmartTasksTreeView(message.projectName, message.iconUri, message.items);
+                                    updateTasksStatus(message.status);
                                     break;
                                 case 'gitChanges':
                                     updateGitChangesFileTree(message.changes);
@@ -1251,16 +1286,16 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function renderMenuItem(item) {
                             const hasSubcommands = item.subcommands && item.subcommands.length > 0;
                             const hasContent = hasSubcommands || item.shellCmd; // Check if it has subcommands or a command
-                            const encodedCmd = encodeShellCmd(item.shellCmd);
+                            const encodedCmd = encodeShellCmd(item.shellCmd || item.command); // Use command as fallback for root
                             return \`
                                 <div class="tree-item" data-id="\${encodedCmd}" \${item.shellCmd ? \`onclick="executeTreeItemCommand(event, '\${encodedCmd}')"\` : ''}>
-                                    \${hasContent ? 
+                                    \${hasSubcommands ? 
                                         \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
                                         '<span style="width: 16px;"></span>'}
-                                    <span class="codicon \${item.icon}"></span>
+                                    \${item.shellCmd ? \`<span class="codicon \${item.icon}"></span>\` : ''}
                                     <span class="tree-item-label">\${item.command}</span>
                                     \${hasSubcommands ? \`
-                                        <div class="subcommands hidden" id="subcommands-\${encodedCmd}">
+                                        <div class="subcommands" id="subcommands-\${encodedCmd}">
                                             \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
                                         </div>
                                     \` : ''}
@@ -1293,9 +1328,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function toggleSubcommands(event, encodedCmd) {
-                            event.stopPropagation();
+                            event.stopPropagation(); // Prevent the click from bubbling up
                             const button = event.target;
-                            const subcommandsContainer = document.getElementById(\`subcommands-\${encodedCmd}\`);
+                            const parentItem = button.closest('.tree-item');
+                            const subcommandsContainer = parentItem.querySelector('.subcommands');
+                            
                             if (subcommandsContainer) {
                                 const isHidden = subcommandsContainer.classList.toggle('hidden');
                                 button.textContent = isHidden ? '>' : 'v';
@@ -1537,6 +1574,34 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     <span class="todo-text">\${item.text}</span>
                                 </div>
                             \`).join('');
+                        }
+
+                        function updateTasksStatus(status) {
+                            const statusElement = document.getElementById('tasksStatus');
+                            if (statusElement) {
+                                let statusText = \`\${status.total} tasks\`;
+                                let statusClass = '';
+                                
+                                if (status.running > 0) {
+                                    statusText += \` (\${status.running} running)\`;
+                                    statusClass = 'has-running';
+                                }
+                                if (status.failed > 0) {
+                                    statusText += \` (\${status.failed} failed)\`;
+                                    statusClass = 'has-error';
+                                }
+                                
+                                statusElement.textContent = statusText;
+                                statusElement.className = \`tasks-status \${statusClass}\`;
+                            }
+                        }
+
+                        function toggleProjectTasks() {
+                            const treeView = document.getElementById('smartTasksTreeView');
+                            const header = document.getElementById('projectTasksHeader');
+                            const toggleButton = header.querySelector('.toggle-subcommands');
+                            const isHidden = treeView.classList.toggle('hidden');
+                            toggleButton.textContent = isHidden ? '>' : 'v';
                         }
                     </script>
                 </body>
@@ -2009,43 +2074,27 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
     public updateSmartTasksTreeView(webview: vscode.Webview) {
         let treeItems;
         let projectName = '';
+        let statusInfo = {
+            total: 0,
+            running: 0,
+            failed: 0
+        };
 
-        /**
-         * @param commandItems
-         */
-        type taskTreeItem = {
-            shellCmd: string;
-            command: string;
-            icon: string;
-            subcommands ?: Array<taskTreeItem>;
-        }
-
-        function langDefToTaskTreeItems(commandItems: Array<langDef.CommandItem> = mbTaskExt.smartCommandEntries) : Array<taskTreeItem> {
-            return commandItems ?.map(entry => ( {
-                shellCmd: entry.shellCmd,
-                command: entry.command,
-                icon: getTaskIcon(entry.command),
-                subcommands: entry.subcommands ? langDefToTaskTreeItems(entry.subcommands) : []
-            })) || [];
+        function countTasks(items: Array<langDef.CommandItem> = mbTaskExt.smartCommandEntries): void {
+            items.forEach(item => {
+                statusInfo.total++;
+                if (item.command === 'running') statusInfo.running++;
+                if (item.command === 'error') statusInfo.failed++;
+                if (item.subcommands) countTasks(item.subcommands);
+            });
         }
 
         if (mbTaskExt.smartCommandEntries.length === 0) {
-            treeItems = [
-                { 
-                    shellCmd: '', 
-                    command: mbTaskExt.smartTasksRootTitle, 
-                    icon: 'codicon-tools',
-                    subcommands: [] // Empty array for no tasks
-                }
-            ];
+            treeItems = [];
         } else {
             projectName = path.basename(mbTaskExt.smartTasksDir);
-            treeItems = [{
-                shellCmd: '',
-                command: projectName || mbTaskExt.smartTasksRootTitle,
-                icon: 'codicon-tools',
-                subcommands: langDefToTaskTreeItems()
-            }];
+            treeItems = langDefToTaskTreeItems();
+            countTasks();
         }
 
         const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(
@@ -2054,16 +2103,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             mbTaskExt.smartProjectIconUri.length > 0 ? mbTaskExt.smartProjectIconUri : 'file_type_rust_toolchain.svg'
         ));
 
-        console.log(`[${logTimeStamp()}] Post messsage to webview ${projectName} ${iconUri} ${treeItems.length}`);
-        //{ '🔍''⚙️''📁''🔧''📄' }
+        console.log(`[${logTimeStamp()}] Post message to webview ${projectName} ${iconUri} ${treeItems.length}`);
+        
         if (!webview.postMessage({
             type: 'updateSmartTasksTree',
             projectName: projectName,
             iconUri: `${iconUri}`,
-            items: treeItems
+            items: treeItems,
+            status: statusInfo
         })) {
             console.error(`[${logTimeStamp()}] post message to webview failed.`);
-        };
+        }
     }
 
     hasChangesToDetect: boolean = false;
@@ -2196,4 +2246,59 @@ interface TodoItem {
     file: string;
     line: number;
     children?: TodoItem[];
+}
+
+function langDefToTaskTreeItems(items: Array<langDef.CommandItem> = mbTaskExt.smartCommandEntries): any[] {
+    return items.map(item => {
+        let treeItem = {
+            command: item.command,
+            shellCmd: item.shellCmd || '',
+            icon: item.command === 'running' ? 'codicon-sync~spin' : 
+                  item.command === 'error' ? 'codicon-error' : 
+                  getCommandIcon(item.command),
+            subcommands: item.subcommands ? langDefToTaskTreeItems(item.subcommands) : undefined
+        };
+        return treeItem;
+    });
+}
+
+function getCommandIcon(command: string): string {
+    switch (command.toLowerCase()) {
+        case 'build':
+            return 'codicon-package';
+        case 'run':
+            return 'codicon-play';
+        case 'test':
+            return 'codicon-beaker';
+        case 'clean':
+            return 'codicon-trash';
+        case 'debug':
+            return 'codicon-debug';
+        case 'install':
+            return 'codicon-desktop-download';
+        case 'update':
+            return 'codicon-sync';
+        case 'deploy':
+            return 'codicon-rocket';
+        case 'start':
+            return 'codicon-play-circle';
+        case 'stop':
+            return 'codicon-stop-circle';
+        case 'restart':
+            return 'codicon-refresh';
+        case 'lint':
+            return 'codicon-checklist';
+        case 'format':
+            return 'codicon-symbol-color';
+        case 'watch':
+            return 'codicon-eye';
+        case 'serve':
+            return 'codicon-server';
+        case 'generate':
+            return 'codicon-file-code';
+        case 'publish':
+            return 'codicon-cloud-upload';
+        default:
+            return 'codicon-terminal';
+    }
 }
