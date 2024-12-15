@@ -1250,10 +1250,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         // Helper function to recursively render menu items
                         function renderMenuItem(item) {
                             const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                            const hasContent = hasSubcommands || item.shellCmd; // Check if it has subcommands or a command
                             const encodedCmd = encodeShellCmd(item.shellCmd);
                             return \`
-                                <div class="tree-item" data-id="\${encodedCmd}" onclick="executeTreeItemCommand(event, '\${encodedCmd}')">
-                                    \${hasSubcommands ? 
+                                <div class="tree-item" data-id="\${encodedCmd}" \${item.shellCmd ? \`onclick="executeTreeItemCommand(event, '\${encodedCmd}')"\` : ''}>
+                                    \${hasContent ? 
                                         \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
                                         '<span style="width: 16px;"></span>'}
                                     <span class="codicon \${item.icon}"></span>
@@ -1483,26 +1484,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 .replace(/'/g, '%27')  // Single quotes
                                 .replace(/"/g, '%22')  // Double quotes
                                 .replace(/\\\\/g, '%5C'); // Backslashes
-                        }
-
-                        // Update the renderMenuItem function to use encoded shellCmd
-                        function renderMenuItem(item) {
-                            const hasSubcommands = item.subcommands && item.subcommands.length > 0;
-                            const encodedCmd = encodeShellCmd(item.shellCmd);
-                            return \`
-                                <div class="tree-item" data-id="\${encodedCmd}" onclick="executeTreeItemCommand(event, '\${encodedCmd}')">
-                                    \${hasSubcommands ? 
-                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
-                                        '<span style="width: 16px;"></span>'}
-                                    <span class="codicon \${item.icon}"></span>
-                                    <span class="tree-item-label">\${item.command}</span>
-                                    \${hasSubcommands ? \`
-                                        <div class="subcommands hidden" id="subcommands-\${encodedCmd}">
-                                            \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
-                                        </div>
-                                    \` : ''}
-                                </div>
-                            \`;
                         }
 
                         let isTreeView = true;
@@ -2049,12 +2030,22 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
         }
 
         if (mbTaskExt.smartCommandEntries.length === 0) {
-              treeItems = [
-                  { shellCmd: '', command: mbTaskExt.smartTasksRootTitle, icon: 'codicon-tools' }
-              ];
-          } else {
-              projectName = path.basename(mbTaskExt.smartTasksDir);
-              treeItems = langDefToTaskTreeItems();
+            treeItems = [
+                { 
+                    shellCmd: '', 
+                    command: mbTaskExt.smartTasksRootTitle, 
+                    icon: 'codicon-tools',
+                    subcommands: [] // Empty array for no tasks
+                }
+            ];
+        } else {
+            projectName = path.basename(mbTaskExt.smartTasksDir);
+            treeItems = [{
+                shellCmd: '',
+                command: projectName || mbTaskExt.smartTasksRootTitle,
+                icon: 'codicon-tools',
+                subcommands: langDefToTaskTreeItems()
+            }];
         }
 
         const iconUri = webview.asWebviewUri(vscode.Uri.joinPath(

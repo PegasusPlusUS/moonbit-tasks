@@ -387,6 +387,14 @@ async function asyncInitLangDef() {
                 { command: 'Test', shellCmd: 'cmake --build .build && ctest --test-dir .build' },
                 { command: 'Run', shellCmd: 'cmake --build .build && ctest --test-dir .build && cmake run run' },
             ], 'folder_type_cmake.svg')],
+            ['Makefile', new handlerInfo('Makefile', [
+                { command: 'Build', shellCmd: 'make build' },
+                { command: 'Test', shellCmd: 'make test' },
+                { command: 'Run', shellCmd: 'make run' },
+                { command: 'Clean', shellCmd: 'make clean' },
+                { command: 'Install', shellCmd: 'make install' },
+                { command: 'Config', shellCmd: 'make config' },
+            ], 'file_type_xcode.svg')]
         ]);
 
         myMap.forEach((value, key) => {
