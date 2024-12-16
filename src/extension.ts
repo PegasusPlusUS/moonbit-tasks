@@ -2076,58 +2076,66 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 return statusIconMap[status]? statusIconMap[status]: { icon:"!", label:"Unknown"};
             }
 
-            // interface changeItem {
-            //     path: string;
-            //     originalUri: vscode.Uri;
-            //     renameUri: vscode.Uri | undefined;
-            //     status: GitStatusCode;
-            // }
+            interface GitChange {
+                uri: vscode.Uri;
+                status: GitStatusCode;
+                renameUri?: vscode.Uri;
+                originalUri?: vscode.Uri;
+            }
 
             interface workingChange {
                 path: string,
                 //originalUri: vscode.Uri,
                 status: string,
                 statusIcon: { icon: string, label: string },
-                staged: boolean
-            }
-            const workingChanges: workingChange[] = state.workingTreeChanges.map((change: { uri: vscode.Uri; status: GitStatusCode; originalUri: vscode.Uri }) => ({
-                path: change.uri.fsPath,
-                //originalUri: change.originalUri,
-                status: getStatusMessage(change.status),
-                statusIcon: getStatusIcon(getStatusMessage(change.status)),
-                staged: false
-            }));
-
-            interface stageChange {
-                path: string,
-                //originalUri: vscode.Uri,
-                rename: string,
-                status: string,
-                statusIcon: { icon: string, label: string },
-                staged: boolean
-            }
-            const stagedChanges: stageChange[] = state.indexChanges.map((change: { uri: vscode.Uri; status: GitStatusCode; renameUri?: vscode.Uri, originalUri: vscode.Uri }) => ({
-                path: change.uri.fsPath,
-                //originalUri: change.originalUri,
-                rename: change.renameUri ? 'from ' + path.basename(change.originalUri.fsPath) : '',
-                status: getStatusMessage(change.status),
-                statusIcon: getStatusIcon(getStatusMessage(change.status)),
-                staged: true
-            }));
-
-            interface mergeChange {
-                path: string,
-                status: string,
-                statusIcon: { icon: string, label: string },
+                staged: boolean,
                 conflicted: boolean
             }
 
-            const mergeConflicts: mergeChange[] = state.mergeChanges ? state.mergeChanges.map((change: { uri: vscode.Uri; status: GitStatusCode }) => ({
+            // Handle working tree changes
+            const workingChanges: workingChange[] = state.workingTreeChanges
+                .filter((change: GitChange) => change.status !== GitStatusCode.BothModified && 
+                                              change.status !== GitStatusCode.BothAdded && 
+                                              change.status !== GitStatusCode.BothDeleted)
+                .map((change: GitChange) => ({
+                    path: change.uri.fsPath,
+                    status: getStatusMessage(change.status),
+                    statusIcon: getStatusIcon(getStatusMessage(change.status)),
+                    staged: false,
+                    conflicted: false
+                }));
+
+            interface stageChange {
+                path: string,
+                rename: string,
+                status: string,
+                statusIcon: { icon: string, label: string },
+                staged: boolean,
+                conflicted: boolean
+            }
+
+            // Handle staged changes
+            const stagedChanges: stageChange[] = state.indexChanges
+                .filter((change: GitChange) => change.status !== GitStatusCode.BothModified && 
+                                              change.status !== GitStatusCode.BothAdded && 
+                                              change.status !== GitStatusCode.BothDeleted)
+                .map((change: GitChange) => ({
+                    path: change.uri.fsPath,
+                    rename: change.renameUri ? 'from ' + path.basename(change.originalUri?.fsPath || '') : '',
+                    status: getStatusMessage(change.status),
+                    statusIcon: getStatusIcon(getStatusMessage(change.status)),
+                    staged: true,
+                    conflicted: false
+                }));
+
+            // Handle merge conflicts
+            const mergeConflicts = state.mergeChanges?.map((change: { uri: vscode.Uri; status: GitStatusCode }) => ({
                 path: change.uri.fsPath,
-                status: getStatusMessage(change.status),
-                statusIcon: getStatusIcon(getStatusMessage(change.status)),
+                status: 'Conflicting',
+                statusIcon: getStatusIcon('Conflicting'),
+                staged: false,
                 conflicted: true
-            })) : [];
+            })) || [];
 
             const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
             const hasUnpulledCommits = state.HEAD?.behind ? state.HEAD.behind > 0 : false;
