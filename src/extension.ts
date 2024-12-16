@@ -1518,8 +1518,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function stageAllFiles() {
                             const changesTree = document.getElementById('changesTree');
                             if (changesTree) {
-                                const files = Array.from(changesTree.querySelectorAll('.file-item'))
-                                    .map(item => item.querySelector('.file-name')?.textContent)
+                                const fileItems = Array.from(changesTree.querySelectorAll('.file-item'));
+                                const files = fileItems
+                                    .map(item => item.querySelector('.file-name')?.getAttribute('title'))
                                     .filter(path => path); // Filter out any undefined/null values
                                 
                                 if (files.length > 0) {
@@ -1534,8 +1535,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function unstageAllFiles() {
                             const stagedTree = document.getElementById('stagedTree');
                             if (stagedTree) {
-                                const files = Array.from(stagedTree.querySelectorAll('.file-item'))
-                                    .map(item => item.querySelector('.file-name')?.textContent)
+                                const fileItems = Array.from(stagedTree.querySelectorAll('.file-item'));
+                                const files = fileItems
+                                    .map(item => item.querySelector('.file-name')?.getAttribute('title'))
                                     .filter(path => path); // Filter out any undefined/null values
                                 
                                 if (files.length > 0) {
