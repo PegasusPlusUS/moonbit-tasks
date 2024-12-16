@@ -1978,7 +1978,16 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             'IndexAdded': { icon: 'A', label: 'Added' },
             'IndexDeleted': { icon: 'D', label: 'Deleted' },
             'IndexRenamed': { icon: 'R', label: 'Renamed' },
-            'IndexCopied': { icon: 'C', label: 'Copied' }
+            'IndexCopied': { icon: 'C', label: 'Copied' },
+            'Conflicting': { icon: '!', label: 'Conflicting' },
+            'Conflict': { icon: '><', label: 'Conflict' },
+            'BothModified': { icon: '!Mm', label: 'Both Modified' },
+            'BothAdded': { icon: '!Aa', label: 'Both Added' },
+            'BothDeleted': { icon: '!Dd', label: 'Both Deleted' },
+            'AddedByUs': { icon: 'U+', label: 'Added by Us' },
+            'DeletedByUs': { icon: 'U-', label: 'Deleted by Us' },
+            'AddedByThem': { icon: 'T+', label: 'Added by Them' },
+            'DeletedByThem': { icon: 'T-', label: 'Deleted by Them' }
         };
 
         try {
@@ -2104,13 +2113,26 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 staged: true
             }));
 
+            interface mergeChange {
+                path: string,
+                status: string,
+                statusIcon: { icon: string, label: string },
+                conflicted: boolean
+            }
+
+            const mergeConflicts: mergeChange[] = state.mergeChanges ? state.mergeChanges.map((change: { uri: vscode.Uri; status: GitStatusCode }) => ({
+                path: change.uri.fsPath,
+                status: getStatusMessage(change.status),
+                statusIcon: getStatusIcon(getStatusMessage(change.status)),
+                conflicted: true
+            })) : [];
+
             const hasUnpushedCommits = state.HEAD?.ahead ? state.HEAD.ahead > 0 : false;
             const hasUnpulledCommits = state.HEAD?.behind ? state.HEAD.behind > 0 : false;
-            const allChanges = [...workingChanges, ...stagedChanges];
+            const allChanges = [...workingChanges, ...stagedChanges, ...mergeConflicts];
 
             // Get current branch from repository state
             const currentBranch = repo.state.HEAD?.name || '';
-            //console.log('Current branch:', currentBranch); // Debug log
 
             // Update title bar buttons color
             this.updateTitleBarGitButtons(hasUnpushedCommits, hasUnpulledCommits, stagedChanges);
@@ -2137,9 +2159,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                 repositories: repositories,
                 branches: branches,
                 currentRepo: repo.rootUri.path,
-                currentBranch: currentBranch,  // Use the current branch from repo state
+                currentBranch: currentBranch,
                 hasStagedChanges: stagedChanges.length > 0,
                 hasUnstagedChanges: workingChanges.length > 0,
+                hasMergeConflicts: mergeConflicts.length > 0,
                 hasUnpushedCommits: hasUnpushedCommits,
                 hasUnpulledCommits: hasUnpulledCommits
             });
