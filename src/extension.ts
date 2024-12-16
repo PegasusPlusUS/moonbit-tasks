@@ -58,9 +58,9 @@ const taskIconMap: { [key: string]: string } = {
 };
 
 // Helper function to get icon for a task
-function getTaskIcon(taskName: string): string {
+function getTaskIcon(cmd: string): string {
     // Convert task name to lowercase for case-insensitive matching
-    const normalizedTask = taskName.toLowerCase();
+    const normalizedTask = cmd.toLowerCase();
 
     // Look for matching keywords in the task name
     for (const [key, icon] of Object.entries(taskIconMap)) {
@@ -398,6 +398,11 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     }
                     //}
                     break;
+                case 'openMergeEditor':
+                    if (data.file) {
+                        vscode.commands.executeCommand('merge-conflict.accept.all-current', vscode.Uri.file(data.file));
+                    }
+                    break;
             }
         });
 
@@ -456,7 +461,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
             <!DOCTYPE html>
             <html>
                 <head>
-                    <link href="${codiconsUri}" rel="stylesheet" />
+                    <link href="\${codiconsUri}" rel="stylesheet" />
                     <style>
                         /* General layout styles */
                         .panel-container {
@@ -575,32 +580,27 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .file-item {
                             display: flex;
                             align-items: center;
-                            padding: 2px 6px;
-                            position: relative;
-                            cursor: default;
-                            user-select: none;
-                        }
-
-                        .file-item:hover {
-                            background: var(--vscode-list-hoverBackground);
+                            padding: 4px 8px;
+                            cursor: pointer;
                         }
 
                         .file-name {
-                            flex-grow: 1;
+                            flex: 1;
+                            white-space: nowrap;
                             overflow: hidden;
                             text-overflow: ellipsis;
-                            white-space: nowrap;
                         }
 
                         .file-actions {
                             display: flex;
                             align-items: center;
                             gap: 4px;
+                            margin-left: auto;
                         }
 
-                        .file-item:hover .file-actions {
-                            display: flex;
-                            gap: 4px;
+                        .git-status {
+                            margin-left: 4px;
+                            color: var(--vscode-gitDecoration-modifiedResourceForeground);
                         }
 
                         .action-button {
@@ -1016,6 +1016,20 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         </div>
                     </div>
 
+                    <!-- Merge Conflicts section -->
+                    <div id="mergeHeader" class="section-header" onclick="toggleMerge()">
+                        <div class="header-content">
+                            <span>Merge Conflicts</span>
+                        </div>
+                        <div class="file-actions">
+                            <button class="action-button" onclick="viewAllMergeConflicts()" title="View All Conflicts">🔍</button>
+                            <button class="toggle-subcommands">></button>
+                        </div>
+                    </div>
+                    <div id="mergeTree" class="file-tree">
+                        <!-- Merge conflict files will be populated here -->
+                    </div>
+
                     <script>
                         const vscode = acquireVsCodeApi();
                         function showError(message) {
@@ -1118,97 +1132,122 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function updateGitChangesFileTree(changes) {
                             const changesTree = document.getElementById('changesTree');
                             const stagedTree = document.getElementById('stagedTree');
+                            const mergeTree = document.getElementById('mergeTree');
                             const commitArea = document.querySelector('.commit-area');
 
-                            // Separate changes into staged and unstaged
-                            const unstagedChanges = changes.filter(file => !file.staged);
-                            const stagedChanges = changes.filter(file => file.staged);
+                            // Remember the current toggle states
+                            const changesHidden = changesTree.classList.contains('hidden');
+                            const stagedHidden = stagedTree.classList.contains('hidden');
+                            const mergeHidden = mergeTree.classList.contains('hidden');
 
-                            // Handle Changes section visibility
-                            const changesHeader = document.getElementById('changesHeader');
-                            if (changesHeader) {
-                                if (unstagedChanges.length > 0) {
-                                    changesHeader.style.display = 'block';
-                                    changesTree.style.display = 'block';
-                                    changesHeader.innerHTML = \`
-                                        <span>Changes (\${unstagedChanges.length})</span>
-                                        <div class="file-actions">
-                                            <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
-                                            <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
-                                            <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
-                                        </div>
-                                    \`;
-                                } else {
-                                    changesHeader.style.display = 'none';
-                                    changesTree.style.display = 'none';
-                                }
+                            // Separate changes into categories
+                            const unstagedChanges = changes.filter(file => !file.staged && !file.conflicted);
+                            const stagedChanges = changes.filter(file => file.staged && !file.conflicted);
+                            const mergeConflicts = changes.filter(file => file.conflicted);
+
+                            // Update Changes section
+                            updateSection('changes', unstagedChanges, changesHidden);
+                            
+                            // Update Staged section
+                            updateSection('staged', stagedChanges, stagedHidden);
+                            
+                            // Update Merge Conflicts section
+                            updateSection('merge', mergeConflicts, mergeHidden);
+
+                            // Show/hide commit area based on staged changes
+                            if (commitArea) {
+                                commitArea.style.display = stagedChanges.length > 0 ? 'block' : 'none';
                             }
 
-                            // Handle Staged section visibility
-                            const stagedHeader = document.getElementById('stagedHeader');
-                            if (stagedHeader) {
-                                if (stagedChanges.length > 0) {
-                                    stagedHeader.style.display = 'flex';
-                                    stagedTree.style.display = 'block';
-                                    commitArea.style.display = 'block';
+                            // Populate the trees with files
+                            populateFileTree(changesTree, unstagedChanges, false);
+                            populateFileTree(stagedTree, stagedChanges, true);
+                            populateFileTree(mergeTree, mergeConflicts, false, true);
+                        }
+
+                        function updateSection(type, files, isHidden) {
+                            const header = document.getElementById(\`\${type}Header\`);
+                            const tree = document.getElementById(\`\${type}Tree\`);
+                            
+                            if (header && tree) {
+                                if (files.length > 0) {
+                                    header.style.display = 'flex';
+                                    tree.style.display = 'block';
+                                    
+                                    let actionButtons = '';
+                                    switch(type) {
+                                        case 'changes':
+                                            actionButtons = \`
+                                                <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
+                                                <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                                                <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                                            \`;
+                                            break;
+                                        case 'staged':
+                                            actionButtons = \`
+                                                <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
+                                                <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                                            \`;
+                                            break;
+                                        case 'merge':
+                                            actionButtons = \`
+                                                <button class="action-button" onclick="viewAllMergeConflicts()" title="View All Conflicts">🔍</button>
+                                            \`;
+                                            break;
+                                    }
+
                                     const headerContent = \`
                                         <div class="header-content">
-                                            <span>Staged Changes (\${stagedChanges.length})</span>
+                                            <span>\${type === 'merge' ? 'Merge Conflicts' : type === 'staged' ? 'Staged Changes' : 'Changes'} (\${files.length})</span>
                                         </div>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
-                                            <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
-                                            <button class="toggle-subcommands">\${stagedHidden ? '>' : 'v'}</button>
+                                            \${actionButtons}
+                                            <button class="toggle-subcommands">\${isHidden ? '>' : 'v'}</button>
                                         </div>
                                     \`;
-                                    stagedHeader.innerHTML = headerContent;
+                                    header.innerHTML = headerContent;
+                                    
                                     // Restore hidden state if it was hidden
-                                    if (stagedHidden) {
-                                        stagedTree.classList.add('hidden');
+                                    if (isHidden) {
+                                        tree.classList.add('hidden');
+                                    } else {
+                                        tree.classList.remove('hidden');
                                     }
                                 } else {
-                                    stagedHeader.style.display = 'none';
-                                    stagedTree.style.display = 'none';
-                                    commitArea.style.display = 'none';
+                                    header.style.display = 'none';
+                                    tree.style.display = 'none';
                                 }
                             }
+                        }
 
-                            // Render unstaged changes
-                            changesTree.innerHTML = unstagedChanges.map(file => {
-                                console.log("Unstaged changed file:", file);
-                                //const status = statusIconMap[file.status] || { icon: '?', label: 'Unknown' };
-                                const fileName = getFileName(file.path);
+                        function populateFileTree(container, files, isStaged, isConflicted = false) {
+                            if (!container) return;
+
+                            const fileList = files.map(file => {
+                                const actions = isConflicted ? \`
+                                    <button class="action-button" onclick="viewFileChanges('\${file.path}', \${isStaged})" title="View Changes">🔍</button>
+                                    <button class="action-button" onclick="openMergeEditor('\${file.path}')" title="Resolve Conflict">⚔️</button>
+                                \` : isStaged ? \`
+                                    <button class="action-button" onclick="viewFileChanges('\${file.path}', true)" title="View Changes">🔍</button>
+                                    <button class="action-button" onclick="unstageFile('\${file.path}')" title="Unstage Changes">-</button>
+                                \` : \`
+                                    <button class="action-button" onclick="viewFileChanges('\${file.path}', false)" title="View Changes">🔍</button>
+                                    <button class="action-button" onclick="stageFile('\${file.path}')" title="Stage Changes">+</button>
+                                    <button class="action-button" onclick="discardFile('\${file.path}')" title="Discard Changes">⨯</button>
+                                \`;
+
                                 return \`
-                                    <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)">
-                                        <span class="file-name">\${fileName}</span>
-                                        <div class="tooltip">\${file.path}</div>
+                                    <div class="file-item">
+                                        <span class="file-name" title="\${file.path}">\${getFileName(file.path)}</span>
                                         <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', false)" title="View Changes">🔍</button>
-                                            <button class="action-button" onclick="stageFile('\${doubleEscape(file.path)}')" title="Stage Changes">+</button>
-                                            <button class="action-button" onclick="discardFile('\${doubleEscape(file.path)}')" title="Discard Changes">⨯</button>
+                                            \${actions}
+                                            <span class="git-status \${file.status}" title="\${file.statusIcon.label}">\${file.statusIcon.icon}</span>
                                         </div>
-                                        <span class="git-status \${file.status}" title="\${file.statusIcon.label}">\${file.statusIcon.icon}</span>
                                     </div>
                                 \`;
                             }).join('');
 
-                            // Render staged changes
-                            stagedTree.innerHTML = stagedChanges.map(file => {
-                                console.log("Staged changed file:", file);
-                                //const status = statusIconMap[file.status] || { icon: '?', label: 'Unknown' };
-                                const fileName = getFileName(file.path);
-                                return \`
-                                    <div class="file-item" data-file="\${file.path}" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)">
-                                        <span class="file-name">\${fileName}</span>
-                                        <div class="tooltip">\${file.path + (file.rename.length > 0 ? ' renamed ' + file.rename:'')}</div>
-                                        <div class="file-actions">
-                                            <button class="action-button" onclick="viewFileChanges('\${doubleEscape(file.path)}', true)" title="View Changes">🔍</button>
-                                            <button class="action-button" onclick="unstageFile('\${doubleEscape(file.path)}')" title="Unstage Changes">-</button>
-                                        </div>
-                                        <span class="git-status \${file.status}" title="\${file.statusIcon.label}">\${file.statusIcon.icon}</span>
-                                    </div>
-                                \`;
-                            }).join('');
+                            container.innerHTML = fileList;
                         }
 
                         // Move the interval setup outside of any function
@@ -1477,13 +1516,34 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         function stageAllFiles() {
-                            const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
-                                .map(item => item.getAttribute('data-file'));
-                            if (unstagedFiles.length > 0) {
-                                vscode.postMessage({
-                                    command: 'stage',
-                                    files: unstagedFiles
-                                });
+                            const changesTree = document.getElementById('changesTree');
+                            if (changesTree) {
+                                const files = Array.from(changesTree.querySelectorAll('.file-item'))
+                                    .map(item => item.querySelector('.file-name')?.textContent)
+                                    .filter(path => path); // Filter out any undefined/null values
+                                
+                                if (files.length > 0) {
+                                    vscode.postMessage({
+                                        command: 'stage',
+                                        files: files
+                                    });
+                                }
+                            }
+                        }
+
+                        function unstageAllFiles() {
+                            const stagedTree = document.getElementById('stagedTree');
+                            if (stagedTree) {
+                                const files = Array.from(stagedTree.querySelectorAll('.file-item'))
+                                    .map(item => item.querySelector('.file-name')?.textContent)
+                                    .filter(path => path); // Filter out any undefined/null values
+                                
+                                if (files.length > 0) {
+                                    vscode.postMessage({
+                                        command: 'unstage',
+                                        files: files
+                                    });
+                                }
                             }
                         }
 
@@ -1498,17 +1558,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     }),
                                     'Are you sure you want to discard changes in all files?'
                                 );
-                            }
-                        }
-
-                        function unstageAllFiles() {
-                            const stagedFiles = Array.from(document.querySelectorAll('#stagedTree .file-item'))
-                                .map(item => item.getAttribute('data-file'));
-                            if (stagedFiles.length > 0) {
-                                vscode.postMessage({
-                                    command: 'unstage',
-                                    files: stagedFiles
-                                });
                             }
                         }
 
@@ -1642,6 +1691,36 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             const toggleButton = header.querySelector('.toggle-subcommands');
                             const isHidden = treeView.classList.toggle('hidden');
                             toggleButton.textContent = isHidden ? '>' : 'v';
+                        }
+
+                        function toggleMerge(event) {
+                            if (event) {
+                                event.stopPropagation();
+                            }
+                            const treeView = document.getElementById('mergeTree');
+                            const header = document.getElementById('mergeHeader');
+                            const toggleButton = header.querySelector('.toggle-subcommands');
+                            const isHidden = treeView.classList.toggle('hidden');
+                            toggleButton.textContent = isHidden ? '>' : 'v';
+                        }
+
+                        function viewAllMergeConflicts() {
+                            const mergeTree = document.getElementById('mergeTree');
+                            const files = Array.from(mergeTree.querySelectorAll('.file-item'))
+                                .map(item => item.querySelector('.file-name').textContent);
+                            
+                            vscode.postMessage({
+                                command: 'viewAllChanges',
+                                files: files,
+                                isConflicted: true
+                            });
+                        }
+
+                        function openMergeEditor(filePath) {
+                            vscode.postMessage({
+                                command: 'openMergeEditor',
+                                file: filePath
+                            });
                         }
                     </script>
                 </body>
@@ -2339,6 +2418,7 @@ function getCommandIcon(command: string): string {
         case 'publish':
             return 'codicon-cloud-upload';
         default:
+            return getTaskIcon(command);
             return 'codicon-terminal';
     }
 }
