@@ -288,3 +288,7 @@ Encounter typescipt bug, VSC 1.94.2, Node.js 20.16.0, Npm 10.8.2
 - Click Project Tasks bar can toggle tasks display.
 
 - Add To Do tree view, to collect To Do information source.
+
+## 0.12.2024121502
+
+- Regression verify and fix staged change tree, working change tree. Add merge conflict tree.

@@ -403,6 +403,24 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         vscode.commands.executeCommand('merge-conflict.accept.all-current', vscode.Uri.file(data.file));
                     }
                     break;
+                case 'openFile':
+                    const { filePath, line } = data;
+                    const uri = vscode.Uri.file(filePath);
+                    async function safeAsyncOpenTextDocument() {
+                        try {
+                            await vscode.workspace.openTextDocument(uri).then(doc => {
+                                vscode.window.showTextDocument(doc).then(editor => {
+                                    const position = new vscode.Position(line - 1, 0); // Line numbers are 0-based
+                                    editor.selection = new vscode.Selection(position, position);
+                                    editor.revealRange(new vscode.Range(position, position));
+                                });
+                            });
+                        } catch (error) {
+                            console.error(`openTextDocument ${uri}, ${error}`);
+                        }
+                    }
+                    safeAsyncOpenTextDocument();
+                    break;
             }
         });
 
@@ -1100,6 +1118,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                     showMessage(message.message, 'info');
                                     break;
                                 case 'updateTodoTree':
+                                    console.log(\`updateTodoTree, \${message.items}\`);
                                     updateTodoTree(message.items);
                                     break;
                             }
@@ -1582,8 +1601,6 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         }
 
-                        console.log(\`Script loaded\`);
-
                         // Custom encode function to handle quotes
                         function encodeShellCmd(cmd) {
                             return cmd
@@ -1626,11 +1643,21 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
                         }
 
+                        function openTodoFile(filePath, line) {
+                            // Send a message to the extension to open the file at the specified line
+                            vscode.postMessage({
+                                command: 'openFile',
+                                filePath: filePath,
+                                line: line
+                            });
+                        }
+                            
                         function renderTodoTree(items, level = 0) {
                             return items.map(item => \`
                                 <div class="todo-item" style="margin-left: \${level * 20}px">
                                     <span class="todo-icon">📌</span>
-                                    <span class="todo-text">\${item.text}</span>
+                                    <span class="todo-text" title="\${item.file}:\${item.line}">\${item.text}</span>
+                                    <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
                                     \${item.children ? renderTodoTree(item.children, level + 1) : ''}
                                 </div>
                             \`).join('');
@@ -1639,8 +1666,9 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         function renderTodoList(items) {
                             return items.map(item => \`
                                 <div class="todo-item">
-                                    <span class="todo-icon">📌</span>
+                                    <span class="todo-icon" title="\${item.file}:\${item.line}">📌</span>
                                     <span class="todo-text">\${item.text}</span>
+                                    <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
                                 </div>
                             \`).join('');
                         }
@@ -1724,6 +1752,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                                 file: filePath
                             });
                         }
+                        console.log(\`Script loaded\`);
                     </script>
                 </body>
             </html>

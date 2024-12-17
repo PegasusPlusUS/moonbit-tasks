@@ -13,6 +13,7 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
 	});
 
+	// TODO: let test do really test job
 	test('my extension', () => {
 		//myExtension.activate(vscode.extensionContext);
 	});
