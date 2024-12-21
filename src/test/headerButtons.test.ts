@@ -7,7 +7,7 @@ const expect = chai.expect;
 describe('Header Buttons in Git Tasks Webview', function () {
     this.timeout(10000); // Set a timeout for async operations
 
-    let webview: vscode.WebviewPanel; // Declare webview variable
+    let webview: vscode.WebviewPanel;
 
     before(async () => {
         // Create a mock ExtensionContext
@@ -31,9 +31,8 @@ describe('Header Buttons in Git Tasks Webview', function () {
             languageModelAccessInformation: {} as any
         };
 
-        await activate(context); // Pass the mock context
+        await activate(context);
 
-        // Create the webview panel for testing
         webview = vscode.window.createWebviewPanel('myGitTasksCustomView', 'Git Tasks', vscode.ViewColumn.One, { enableScripts: true });
 
         // Set the HTML content for the webview
@@ -44,45 +43,69 @@ describe('Header Buttons in Git Tasks Webview', function () {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Git Tasks</title>
+                <style>
+                    .collapsible-content {
+                        display: none; /* Initially hide content */
+                    }
+                </style>
             </head>
             <body>
-                <div id="changesHeader">Changes Header</div>
-                <div class="file-actions">
-                    <button class="action-button" onclick="console.log('Action 1')">Action 1</button>
-                    <button class="action-button" onclick="console.log('Action 2')">Action 2</button>
+                <div id="changesHeader" class="collapsible-header">Changes Header</div>
+                <div id="changesContent" class="collapsible-content">
+                    <div class="file-actions">
+                        <button class="action-button" onclick="console.log('Action 1')">Action 1</button>
+                        <button class="action-button" onclick="console.log('Action 2')">Action 2</button>
+                    </div>
                 </div>
-                <div id="stagedHeader">Staged Header</div>
-                <div class="file-actions">
-                    <button class="action-button" onclick="console.log('Action 3')">Action 3</button>
+                <div id="stagedHeader" class="collapsible-header">Staged Header</div>
+                <div id="stagedContent" class="collapsible-content">
+                    <div class="file-actions">
+                        <button class="action-button" onclick="console.log('Action 3')">Action 3</button>
+                    </div>
                 </div>
+
+                <script>
+                    document.querySelectorAll('.collapsible-header').forEach(header => {
+                        header.addEventListener('click', () => {
+                            const content = header.nextElementSibling;
+                            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                        });
+                    });
+                </script>
             </body>
             </html>
         `;
     });
 
-    it('should display action buttons for Changes header on hover', async () => {
-        // Wait for the webview to load
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    it('should toggle display of changes content when clicking Changes header', async () => {
+        // Simulate click on Changes header
+        await webview.webview.postMessage({ command: 'clickChangesHeader' });
 
-        // Check if the Changes header is present
-        const changesHeader = webview.webview.html.includes('Changes Header');
-        expect(changesHeader).to.be.true;
+        // Check if changes content is displayed
+        const changesContentVisible = webview.webview.html.includes('display: block');
+        expect(changesContentVisible).to.be.true;
 
-        // Simulate mouse hover over the Changes header
-        // Note: You cannot simulate mouse events in the test directly, but you can check the HTML content
+        // Simulate click again to hide
+        await webview.webview.postMessage({ command: 'clickChangesHeader' });
 
-        // Check if action buttons are visible
-        const actionButtons = webview.webview.html.includes('action-button');
-        expect(actionButtons).to.be.true; // Ensure there are action buttons
+        // Check if changes content is hidden
+        const changesContentHidden = webview.webview.html.includes('display: none');
+        expect(changesContentHidden).to.be.true;
     });
 
-    it('should display action buttons for Staged header on hover', async () => {
-        // Check if the Staged header is present
-        const stagedHeader = webview.webview.html.includes('Staged Header');
-        expect(stagedHeader).to.be.true;
+    it('should toggle display of staged content when clicking Staged header', async () => {
+        // Simulate click on Staged header
+        await webview.webview.postMessage({ command: 'clickStagedHeader' });
 
-        // Check if action buttons are visible
-        const actionButtons = webview.webview.html.includes('action-button');
-        expect(actionButtons).to.be.true; // Ensure there are action buttons
+        // Check if staged content is displayed
+        const stagedContentVisible = webview.webview.html.includes('display: block');
+        expect(stagedContentVisible).to.be.true;
+
+        // Simulate click again to hide
+        await webview.webview.postMessage({ command: 'clickStagedHeader' });
+
+        // Check if staged content is hidden
+        const stagedContentHidden = webview.webview.html.includes('display: none');
+        expect(stagedContentHidden).to.be.true;
     });
 });
