@@ -596,44 +596,37 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         }
 
                         .file-item {
-                            display: flex;
-                            align-items: center;
-                            padding: 4px 8px;
-                            cursor: pointer;
+                            position: relative;
+                            display: flex; /* Use flexbox for alignment */
+                            align-items: center; /* Center items vertically */
                         }
 
-                        .file-name {
-                            flex: 1;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
+                        .change-icon {
+                            margin-right: 8px; /* Space between icon and file name */
+                            font-weight: bold; /* Make the icon bold */
                         }
 
                         .file-actions {
-                            display: flex;
-                            align-items: center;
-                            gap: 4px;
-                            margin-left: auto;
+                            display: none; /* Initially hide the actions */
+                            position: absolute;
+                            right: 0;
+                            top: 0;
+                            background: white; /* Optional: background for better visibility */
+                            border: 1px solid #ccc; /* Optional: border for better visibility */
+                            z-index: 10; /* Ensure it appears above other elements */
+                        }
+
+                        .file-item:hover .file-actions {
+                            display: flex; /* Show actions on hover */
+                        }
+
+                        .action-button {
+                            margin-left: 5px; /* Space between buttons */
                         }
 
                         .git-status {
                             margin-left: 4px;
                             color: var(--vscode-gitDecoration-modifiedResourceForeground);
-                        }
-
-                        .action-button {
-                            padding: 2px 4px;
-                            background: transparent;
-                            border: none;
-                            color: var(--vscode-foreground);
-                            cursor: pointer;
-                            font-size: 12px;
-                            opacity: 0.8;
-                        }
-
-                        .action-button:hover {
-                            opacity: 1;
-                            background: var(--vscode-button-background);
                         }
 
                         .tooltip {
@@ -943,6 +936,22 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         .file-tree.hidden {
                             display: none !important;
                         }
+
+                        /* Example CSS for collapsible sections */
+                        .collapsible {
+                            border: 1px solid #ccc;
+                            padding: 10px;
+                            margin-bottom: 10px;
+                        }
+
+                        .collapsible-header {
+                            background-color: #f4f4f4;
+                            cursor: pointer;
+                        }
+
+                        .collapsible-content {
+                            display: none; /* Initially hide content */
+                        }
                     </style>
                 </head>
                 <body>
@@ -961,9 +970,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <!-- Changes section -->
-                    <div id="changesHeader" class="section-header" onclick="toggleChanges()">
+                    <div id="changesHeader" class="section-header collapsible" onclick="toggleChanges()">
                         <div class="header-content">
                             <span>Changes</span>
+                            <div class="header-actions">
+                                <button onclick="stageAll()" title="Stage All">Stage All</button>
+                                <button onclick="fetchChanges()" title="Fetch Changes">Fetch</button>
+                            </div>
                         </div>
                         <div class="file-actions">
                             <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
@@ -972,14 +985,17 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <button class="toggle-subcommands">></button>
                         </div>
                     </div>
-                    <div id="changesTree" class="file-tree">
+                    <div id="changesTree" class="file-tree collapsible-content">
                         <!-- Changed files will be populated here -->
                     </div>
 
                     <!-- Staged section -->
-                    <div id="stagedHeader" class="section-header" onclick="toggleStaged()">
+                    <div id="stagedHeader" class="section-header collapsible" onclick="toggleStaged()">
                         <div class="header-content">
                             <span>Staged Changes</span>
+                            <div class="header-actions">
+                                <button onclick="unstageAll()" title="Unstage All">Unstage All</button>
+                            </div>
                         </div>
                         <div class="file-actions">
                             <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
@@ -987,7 +1003,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <button class="toggle-subcommands">></button>
                         </div>
                     </div>
-                    <div id="stagedTree" class="file-tree">
+                    <div id="stagedTree" class="file-tree collapsible-content">
                         <!-- Staged files will be populated here -->
                     </div>
 
@@ -1035,7 +1051,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                     </div>
 
                     <!-- Merge Conflicts section -->
-                    <div id="mergeHeader" class="section-header" onclick="toggleMerge()">
+                    <div id="mergeHeader" class="section-header collapsible" onclick="toggleMerge()">
                         <div class="header-content">
                             <span>Merge Conflicts</span>
                         </div>
@@ -1044,7 +1060,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             <button class="toggle-subcommands">></button>
                         </div>
                     </div>
-                    <div id="mergeTree" class="file-tree">
+                    <div id="mergeTree" class="file-tree collapsible-content">
                         <!-- Merge conflict files will be populated here -->
                     </div>
 
@@ -1243,6 +1259,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             if (!container) return;
 
                             const fileList = files.map(file => {
+                                const changeIcon = getChangeIcon(file.status); // Function to determine the icon based on file status
                                 const actions = isConflicted ? \`
                                     <button class="action-button" onclick="viewFileChanges('\${file.path}', \${isStaged})" title="View Changes">🔍</button>
                                     <button class="action-button" onclick="openMergeEditor('\${file.path}')" title="Resolve Conflict">⚔️</button>
@@ -1257,10 +1274,10 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
 
                                 return \`
                                     <div class="file-item">
+                                        <span class="change-icon">\${changeIcon}</span> <!-- Always show the change icon -->
                                         <span class="file-name" title="\${file.path}">\${getFileName(file.path)}</span>
                                         <div class="file-actions">
                                             \${actions}
-                                            <span class="git-status \${file.status}" title="\${file.statusIcon.label}">\${file.statusIcon.icon}</span>
                                         </div>
                                     </div>
                                 \`;
@@ -1753,6 +1770,14 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             });
                         }
                         console.log(\`Script loaded\`);
+
+                        // JavaScript to handle collapsible sections
+                        document.querySelectorAll('.collapsible-header').forEach(header => {
+                            header.addEventListener('click', () => {
+                                const content = header.nextElementSibling;
+                                content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                            });
+                        });
                     </script>
                 </body>
             </html>

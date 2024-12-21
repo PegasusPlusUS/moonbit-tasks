@@ -372,3 +372,10 @@ let rootDir : vscode.WorkspaceFolder | undefined; // = undefined;
 ### 0.12.2024121502
 
 - Regression verify and fix staged change tree, working change tree. Add merge conflict tree.
+
+### 0.12.2024122001
+
+- Add test case to verify already mature function not messed up by AI copilots.
+
+- Add commit changed files and copy to another branch function, and copy other files (not changes or staged) to another branch from explorer context menu.
+

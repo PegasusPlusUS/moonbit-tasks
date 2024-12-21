@@ -1,7 +1,4 @@
 import * as assert from 'assert';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
 import * as myExtension from '../extension';
 
@@ -13,8 +10,31 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
 	});
 
-	// TODO: let test do really test job
-	test('my extension', () => {
-		//myExtension.activate(vscode.extensionContext);
+	test('Activate extension', async () => {
+		// Create a more complete mock of the ExtensionContext
+		const context: vscode.ExtensionContext = {
+			subscriptions: [],
+			workspaceState: {} as any,
+			globalState: {} as any,
+			secrets: {} as any,
+			extensionUri: vscode.Uri.parse('http://localhost'),
+			extensionPath: '',
+			asAbsolutePath: (relativePath: string) => relativePath,
+			logUri: vscode.Uri.parse('http://localhost/log'),
+			globalStorageUri: vscode.Uri.parse('http://localhost/globalStorage'),
+			storageUri: vscode.Uri.parse('http://localhost/storage'),
+			environmentVariableCollection: {} as any,
+			storagePath: '',
+			globalStoragePath: '',
+			logPath: '',
+			extensionMode: vscode.ExtensionMode.Development,
+			extension: {} as any,
+			languageModelAccessInformation: {} as any
+		};
+
+		await myExtension.activate(context); // Call the activate function
+
+		// Add assertions to verify the expected behavior after activation
+		assert.ok(context.subscriptions.length > 0, 'Expected subscriptions to be added');
 	});
 });
