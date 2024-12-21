@@ -12,6 +12,7 @@ import * as smartTaskExt from './smart_tasks_panel_provider';
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import simpleGit, { SimpleGit } from 'simple-git';
 
 //import * as child_process from 'child_process';
 export function logTimeStamp(): string {
@@ -85,6 +86,23 @@ export function deactivate() {
 function registerGitTasksWebview(context: vscode.ExtensionContext) {
     // Register Smart Tasks Webview
     const gitTasksProvider = new TasksWebviewProvider(context.extensionUri);
+
+//    const webview = vscode.window.createWebviewPanel('myGitTasksCustomView', 'Git Tasks', vscode.ViewColumn.One, { enableScripts: true });
+
+    if (gitTasksProvider._webview) {
+        // Set the HTML content for the webview
+        gitTasksProvider._webview.html = getWebviewContent();
+
+        // Handle messages from the webview
+        gitTasksProvider._webview.onDidReceiveMessage(async (message: { command: string; branch: string }) => {
+            if (message.command === 'commitAndCopy') {
+                const { branch } = message;
+                await gitTasksProvider.commitAndCopyToBranch(branch);
+            }
+        });
+    }
+
+    context.subscriptions.push(gitTasksProvider);
 
     // Register the commands for the title bar buttons
     context.subscriptions.push(
@@ -701,7 +719,7 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             cursor: not-allowed;
                         }
 
-                        /* Keep the action buttons (+ - ×) styling separate */
+                        /* Keep the action buttons (+ - ��) styling separate */
                         .action-button {
                             padding: 2px 4px;
                             background: transparent;
@@ -1064,6 +1082,13 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                         <!-- Merge conflict files will be populated here -->
                     </div>
 
+                    <div id="changesHeader" class="collapsible-header">Changes Header</div>
+                    <div id="changesContent" class="collapsible-content">
+                        <div class="file-actions">
+                            <button class="action-button" id="commitAndCopyButton">Commit and Copy to Another Branch</button>
+                        </div>
+                    </div>
+
                     <script>
                         const vscode = acquireVsCodeApi();
                         function showError(message) {
@@ -1337,451 +1362,621 @@ class TasksWebviewProvider implements vscode.WebviewViewProvider {
                             }
                         }
 
-                        function gitPush() {
-                            vscode.postMessage({
-                                command: 'push',
-                                message: ''
-                            });
-                        }
+                        async function commitAndCopyToBranch(branch: string) {
+                            const git = simpleGit();
+                            const commitMessage = 'Your commit message'; // You can prompt the user for this
 
-                        function getGitChanges() {
-                            vscode.postMessage({ command: 'getChanges' });
-                        }
+                            try {
+                                // Commit staged files
+                                await git.add('./*'); // Add all staged files
+                                await git.commit(commitMessage); // Commit the staged files
+                                vscode.window.showInformationMessage('Staged files committed successfully.');
 
-                        function toggleSubmenu(element) {
-                            const childrenContainer = element.querySelector('.tree-children');
-                            if (childrenContainer) {
-                                childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                                // Switch to the target branch
+                                await git.checkout(branch); // Switch to the target branch
+                                await git.pull(); // Update the branch with the latest changes
+
+                                // Logic to copy the committed files (e.g., cherry-pick the last commit)
+                                await git.cherryPick('HEAD'); // Cherry-pick the last commit
+                                vscode.window.showInformationMessage(\`Committed files copied to branch:\${branch}\`);
+                            } catch (error) {
+                                if (error instanceof Error) {
+                                    vscode.window.showErrorMessage(\`Failed to commit and copy: \${error.message}\`);
+                                } else {
+                                    vscode.window.showErrorMessage('Failed to commit and copy: Unknown error occurred.');
+                                }
                             }
                         }
+                    }
 
-                        // Update rendering logic to attach toggle:
-                        function renderTreeItems(items) {
-                            if (!items || !Array.isArray(items)) return '';
+                    function gitPush() {
+                        vscode.postMessage({
+                            command: 'push',
+                            message: ''
+                        });
+                    }
 
-                            return items.map(function(item) {
-                                const hasChildren = item.children && item.children.length > 0;
-                                const childrenHtml = hasChildren
-                                    ? \`<div class="tree-children">\${renderTreeItems(item.children)}</div>\`
-                                    : '';
+                    function getGitChanges() {
+                        vscode.postMessage({ command: 'getChanges' });
+                    }
 
-                                return \`
-                                    <div class="tree-item" data-id="\${item.shellCmd}" onclick="\${hasChildren ? 'toggleSubmenu(this)' : 'selectSmartTasksTreeItem(this)'}">
-                                        <span class="codicon \${item.icon}"></span>
-                                        <span class="tree-item-label">\${item.command}</span>
-                                        \${childrenHtml}
-                                    </div>
-                                \`;
-                            }).join('');
+                    function toggleSubmenu(element) {
+                        const childrenContainer = element.querySelector('.tree-children');
+                        if (childrenContainer) {
+                            childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
                         }
+                    }
 
-                        // Helper function to recursively render menu items
-                        function renderMenuItem(item) {
-                            const hasSubcommands = item.subcommands && item.subcommands.length > 0;
-                            const hasContent = hasSubcommands || item.shellCmd; // Check if it has subcommands or a command
-                            const encodedCmd = encodeShellCmd(item.shellCmd || item.command); // Use command as fallback for root
+                    // Update rendering logic to attach toggle:
+                    function renderTreeItems(items) {
+                        if (!items || !Array.isArray(items)) return '';
+
+                        return items.map(function(item) {
+                            const hasChildren = item.children && item.children.length > 0;
+                            const childrenHtml = hasChildren
+                                ? \`<div class="tree-children">\${renderTreeItems(item.children)}</div>\`
+                                : '';
+
                             return \`
-                                <div class="tree-item" data-id="\${encodedCmd}" \${item.shellCmd ? \`onclick="executeTreeItemCommand(event, '\${encodedCmd}')"\` : ''}>
-                                    \${hasSubcommands ? 
-                                        \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
-                                        '<span style="width: 16px;"></span>'}
-                                    \${item.shellCmd ? \`<span class="codicon \${item.icon}"></span>\` : ''}
+                                <div class="tree-item" data-id="\${item.shellCmd}" onclick="\${hasChildren ? 'toggleSubmenu(this)' : 'selectSmartTasksTreeItem(this)'}">
+                                    <span class="codicon \${item.icon}"></span>
                                     <span class="tree-item-label">\${item.command}</span>
-                                    \${hasSubcommands ? \`
-                                        <div class="subcommands" id="subcommands-\${encodedCmd}">
-                                            \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
-                                        </div>
-                                    \` : ''}
+                                    \${childrenHtml}
                                 </div>
                             \`;
+                        }).join('');
+                    }
+
+                    // Helper function to recursively render menu items
+                    function renderMenuItem(item) {
+                        const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                        const hasContent = hasSubcommands || item.shellCmd; // Check if it has subcommands or a command
+                        const encodedCmd = encodeShellCmd(item.shellCmd || item.command); // Use command as fallback for root
+                        return \`
+                            <div class="tree-item" data-id="\${encodedCmd}" \${item.shellCmd ? \`onclick="executeTreeItemCommand(event, '\${encodedCmd}')"\` : ''}>
+                                \${hasSubcommands ? 
+                                    \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
+                                    '<span style="width: 16px;"></span>'}
+                                \${item.shellCmd ? \`<span class="codicon \${item.icon}"></span>\` : ''}
+                                <span class="tree-item-label">\${item.command}</span>
+                                \${hasSubcommands ? \`
+                                    <div class="subcommands" id="subcommands-\${encodedCmd}">
+                                        \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
+                                    </div>
+                                \` : ''}
+                            </div>
+                        \`;
+                    }
+
+                    function updateSmartTasksTreeView(projectName, projectIconUri, items) {
+                        const projectNameSpan = document.getElementById('projectNameSpan');
+                        if (projectNameSpan) {
+                            projectNameSpan.innerHTML = projectName;
                         }
 
-                        function updateSmartTasksTreeView(projectName, projectIconUri, items) {
-                            const projectNameSpan = document.getElementById('projectNameSpan');
-                            if (projectNameSpan) {
-                                projectNameSpan.innerHTML = projectName;
+                        if (projectIconUri) {
+                            const headerIcon = document.getElementById('headerIcon');
+                            if (headerIcon) {
+                                headerIcon.src = projectIconUri;
                             }
-
-                            if (projectIconUri) {
-                                const headerIcon = document.getElementById('headerIcon');
-                                if (headerIcon) {
-                                    headerIcon.src = projectIconUri;
-                                }
-                            }
-
-                            const treeView = document.getElementById('smartTasksTreeView');
-                            if (!items || !Array.isArray(items)) {
-                                treeView.innerHTML = '';
-                                return;
-                            }
-
-                            // Use the recursive helper function to render all items
-                            const itemsHtml = items.map(item => renderMenuItem(item)).join('');
-                            treeView.innerHTML = itemsHtml;
+                        }
                         }
 
-                        function toggleSubcommands(event, encodedCmd) {
-                            event.stopPropagation(); // Prevent the click from bubbling up
-                            const button = event.target;
-                            const parentItem = button.closest('.tree-item');
-                            const subcommandsContainer = parentItem.querySelector('.subcommands');
+                        const treeView = document.getElementById('smartTasksTreeView');
+                        if (!items || !Array.isArray(items)) {
+                            treeView.innerHTML = '';
+                            return;
+                        }
+
+                        // Use the recursive helper function to render all items
+                        const itemsHtml = items.map(item => renderMenuItem(item)).join('');
+                        treeView.innerHTML = itemsHtml;
+                    }
+
+                    function toggleSubcommands(event, encodedCmd) {
+                        event.stopPropagation(); // Prevent the click from bubbling up
+                        const button = event.target;
+                        const parentItem = button.closest('.tree-item');
+                        const subcommandsContainer = parentItem.querySelector('.subcommands');
+                        
+                        if (subcommandsContainer) {
+                            const isHidden = subcommandsContainer.classList.toggle('hidden');
+                            button.textContent = isHidden ? '>' : 'v';
+                        }
+                    }
+
+                    function executeTreeItemCommand(event, encodedCmd) {
+                        event.stopPropagation();
+                        vscode.postMessage({
+                            command: 'smartTasksTreeItemSelected',
+                            shellCmd: encodedCmd
+                        });
+                    }
+
+                    function selectSmartTasksTreeItem(element) {
+                        //console.log('selectSmartTasksTreeItem', element);
+                        document.querySelectorAll('.tree-item.selected').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+
+                        element.classList.add('selected');
+
+                        vscode.postMessage({
+                            command: 'smartTasksTreeItemSelected',
+                            shellCmd: element.dataset.id
+                        });
+                    }
+
+                    function stageFile(filePath) {
+                        vscode.postMessage({
+                            command: 'stage',
+                            files: [filePath]
+                        });
+                    }
+
+                    function unstageFile(filePath) {
+                        vscode.postMessage({
+                            command: 'unstage',
+                            files: [filePath]
+                        });
+                    }
+
+                    function discardFile(filePath) {
+                        showModal(
+                            () => {
+                                vscode.postMessage({
+                                    command: 'discard',
+                                    files: [filePath]
+                                });
+                            },
+                            'Are you sure you want to discard changes in this file?'
+                        );
+                    }
+
+                    function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
+                        const repoSelect = document.getElementById('repoSelect');
+                        const branchSelect = document.getElementById('branchSelect');
+
+                        // Update repository list
+                        if (repoSelect) {
+                            repoSelect.innerHTML = repositories.map(repo => 
+                                '<option value="' + repo.path + '" title="' + repo.path + ' -> ' + (repo.originUri || 'None') + '" ' + 
+                                (repo.path === currentRepo ? 'selected' : '') + '>' +
+                                repo.name +
+                                '</option>'
+                            ).join('');
+                        }
+
+                        // Update branch list
+                        if (branchSelect) {
+                            // First check if current branch exists in the list
+                            const branchExists = branches.some(branch => branch.name === currentBranch);
                             
-                            if (subcommandsContainer) {
-                                const isHidden = subcommandsContainer.classList.toggle('hidden');
-                                button.textContent = isHidden ? '>' : 'v';
-                            }
-                        }
-
-                        function executeTreeItemCommand(event, encodedCmd) {
-                            event.stopPropagation();
-                            vscode.postMessage({
-                                command: 'smartTasksTreeItemSelected',
-                                shellCmd: encodedCmd
-                            });
-                        }
-
-                        function selectSmartTasksTreeItem(element) {
-                            //console.log('selectSmartTasksTreeItem', element);
-                            document.querySelectorAll('.tree-item.selected').forEach(item => {
-                                item.classList.remove('selected');
-                            });
-
-                            element.classList.add('selected');
-
-                            vscode.postMessage({
-                                command: 'smartTasksTreeItemSelected',
-                                shellCmd: element.dataset.id
-                            });
-                        }
-
-                        function stageFile(filePath) {
-                            vscode.postMessage({
-                                command: 'stage',
-                                files: [filePath]
-                            });
-                        }
-
-                        function unstageFile(filePath) {
-                            vscode.postMessage({
-                                command: 'unstage',
-                                files: [filePath]
-                            });
-                        }
-
-                        function discardFile(filePath) {
-                            showModal(
-                                () => {
-                                    vscode.postMessage({
-                                        command: 'discard',
-                                        files: [filePath]
-                                    });
-                                },
-                                'Are you sure you want to discard changes in this file?'
-                            );
-                        }
-
-                        function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
-                            const repoSelect = document.getElementById('repoSelect');
-                            const branchSelect = document.getElementById('branchSelect');
-
-                            // Update repository list
-                            if (repoSelect) {
-                                repoSelect.innerHTML = repositories.map(repo => 
-                                    '<option value="' + repo.path + '" title="' + repo.path + ' -> ' + (repo.originUri || 'None') + '" ' + 
-                                    (repo.path === currentRepo ? 'selected' : '') + '>' +
-                                    repo.name +
+                            branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>Select Branch</option>' +
+                                branches.map(branch => 
+                                    '<option value="' + branch.name + '" ' + 
+                                    (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
+                                    branch.name +
                                     '</option>'
                                 ).join('');
-                            }
 
-                            // Update branch list
-                            if (branchSelect) {
-                                // First check if current branch exists in the list
-                                const branchExists = branches.some(branch => branch.name === currentBranch);
-                                
-                                branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>Select Branch</option>' +
-                                    branches.map(branch => 
-                                        '<option value="' + branch.name + '" ' + 
-                                        (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
-                                        branch.name +
-                                        '</option>'
-                                    ).join('');
-
-                                // Add or remove the no-branch-selected class based on selection
-                                if (!branchExists) {
-                                    branchSelect.classList.add('no-branch-selected');
-                                } else {
-                                    branchSelect.classList.remove('no-branch-selected');
-                                }
-                            }
-                        }
-
-                        // Add repository and branch change handlers
-                        document.getElementById('repoSelect')?.addEventListener('change', function(e) {
-                            vscode.postMessage({
-                                command: 'switchRepository',
-                                path: e.target.value
-                            });
-                        });
-
-                        document.getElementById('branchSelect')?.addEventListener('change', function(e) {
-                            vscode.postMessage({
-                                command: 'switchBranch',
-                                branch: e.target.value
-                            });
-                        });
-
-                        let pendingAction = null;
-
-                        function showModal(action, message) {
-                            pendingAction = action;
-                            document.getElementById('modalContent').textContent = message;
-                            document.getElementById('confirmModal').style.display = 'block';
-                        }
-
-                        function closeModal() {
-                            pendingAction = null;
-                            document.getElementById('confirmModal').style.display = 'none';
-                        }
-
-                        function confirmModal() {
-                            if (pendingAction) {
-                                pendingAction();
-                            }
-                            closeModal();
-                        }
-
-                        function stageAllFiles() {
-                            const changesTree = document.getElementById('changesTree');
-                            if (changesTree) {
-                                const fileItems = Array.from(changesTree.querySelectorAll('.file-item'));
-                                const files = fileItems
-                                    .map(item => item.querySelector('.file-name')?.getAttribute('title'))
-                                    .filter(path => path); // Filter out any undefined/null values
-                                
-                                if (files.length > 0) {
-                                    vscode.postMessage({
-                                        command: 'stage',
-                                        files: files
-                                    });
-                                }
-                            }
-                        }
-
-                        function unstageAllFiles() {
-                            const stagedTree = document.getElementById('stagedTree');
-                            if (stagedTree) {
-                                const fileItems = Array.from(stagedTree.querySelectorAll('.file-item'));
-                                const files = fileItems
-                                    .map(item => item.querySelector('.file-name')?.getAttribute('title'))
-                                    .filter(path => path); // Filter out any undefined/null values
-                                
-                                if (files.length > 0) {
-                                    vscode.postMessage({
-                                        command: 'unstage',
-                                        files: files
-                                    });
-                                }
-                            }
-                        }
-
-                        function discardAllFiles() {
-                            const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
-                                .map(item => item.getAttribute('data-file'));
-                            if (unstagedFiles.length > 0) {
-                                showModal(
-                                    () => vscode.postMessage({
-                                        command: 'discard',
-                                        files: unstagedFiles
-                                    }),
-                                    'Are you sure you want to discard changes in all files?'
-                                );
-                            }
-                        }
-
-                        function viewAllChanges(isStaged) {
-                            const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
-                                .map(item => item.getAttribute('data-file'));
-
-                            vscode.postMessage({
-                                command: 'viewAllChanges',
-                                files: files,
-                                isStaged: isStaged
-                            });
-                        }
-
-                        function viewFileChanges(filePath, isStaged) {
-                            vscode.postMessage({
-                                command: 'viewFileChanges',
-                                filePath: filePath,
-                                isStaged: isStaged
-                            });
-                        }
-
-                        // Custom encode function to handle quotes
-                        function encodeShellCmd(cmd) {
-                            return cmd
-                                .replace(/'/g, '%27')  // Single quotes
-                                .replace(/"/g, '%22')  // Double quotes
-                                .replace(/\\\\/g, '%5C'); // Backslashes
-                        }
-
-                        let isTreeView = true;
-                        function toggleViewMode() {
-                            isTreeView = !isTreeView;
-                            const todoTree = document.getElementById('todoTreeView');
-                            const button = document.getElementById('viewToggleButton');
-                            
-                            if (isTreeView) {
-                                todoTree.classList.remove('list-view');
-                                todoTree.classList.add('tree-view');
-                                button.textContent = '🌳';
+                            // Add or remove the no-branch-selected class based on selection
+                            if (!branchExists) {
+                                branchSelect.classList.add('no-branch-selected');
                             } else {
-                                todoTree.classList.remove('tree-view');
-                                todoTree.classList.add('list-view');
-                                button.textContent = '📝';
-                            }
-                            
-                            // Refresh the current view
-                            updateTodoTree(currentTodoItems);
-                        }
-
-                        let currentTodoItems = [];
-                        function updateTodoTree(items) {
-                            currentTodoItems = items;
-                            const todoItems = document.getElementById('todoItems');
-                            
-                            if (isTreeView) {
-                                // Render as tree
-                                todoItems.innerHTML = renderTodoTree(items);
-                            } else {
-                                // Render as list
-                                todoItems.innerHTML = renderTodoList(items);
+                                branchSelect.classList.remove('no-branch-selected');
                             }
                         }
+                    }
 
-                        function openTodoFile(filePath, line) {
-                            // Send a message to the extension to open the file at the specified line
-                            vscode.postMessage({
-                                command: 'openFile',
-                                filePath: filePath,
-                                line: line
-                            });
-                        }
-                            
-                        function renderTodoTree(items, level = 0) {
-                            return items.map(item => \`
-                                <div class="todo-item" style="margin-left: \${level * 20}px">
-                                    <span class="todo-icon">📌</span>
-                                    <span class="todo-text" title="\${item.file}:\${item.line}">\${item.text}</span>
-                                    <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
-                                    \${item.children ? renderTodoTree(item.children, level + 1) : ''}
-                                </div>
-                            \`).join('');
-                        }
-
-                        function renderTodoList(items) {
-                            return items.map(item => \`
-                                <div class="todo-item">
-                                    <span class="todo-icon" title="\${item.file}:\${item.line}">📌</span>
-                                    <span class="todo-text">\${item.text}</span>
-                                    <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
-                                </div>
-                            \`).join('');
-                        }
-
-                        function updateTasksStatus(status) {
-                            const statusElement = document.getElementById('tasksStatus');
-                            if (statusElement) {
-                                let statusText = \`\${status.total} tasks\`;
-                                let statusClass = '';
-                                
-                                if (status.running > 0) {
-                                    statusText += \` (\${status.running} running)\`;
-                                    statusClass = 'has-running';
-                                }
-                                if (status.failed > 0) {
-                                    statusText += \` (\${status.failed} failed)\`;
-                                    statusClass = 'has-error';
-                                }
-                                
-                                statusElement.textContent = statusText;
-                                statusElement.className = \`tasks-status \${statusClass}\`;
-                            }
-                        }
-
-                        function toggleProjectTasks() {
-                            const treeView = document.getElementById('smartTasksTreeView');
-                            const header = document.getElementById('projectTasksHeader');
-                            const toggleButton = header.querySelector('.toggle-subcommands');
-                            const isHidden = treeView.classList.toggle('hidden');
-                            toggleButton.textContent = isHidden ? '>' : 'v';
-                        }
-
-                        function toggleChanges(event) {
-                            if (event) {
-                                event.stopPropagation();
-                            }
-                            const treeView = document.getElementById('changesTree');
-                            const header = document.getElementById('changesHeader');
-                            const toggleButton = header.querySelector('.toggle-subcommands');
-                            const isHidden = treeView.classList.toggle('hidden');
-                            toggleButton.textContent = isHidden ? '>' : 'v';
-                        }
-
-                        function toggleStaged(event) {
-                            if (event) {
-                                event.stopPropagation();
-                            }
-                            const treeView = document.getElementById('stagedTree');
-                            const header = document.getElementById('stagedHeader');
-                            const toggleButton = header.querySelector('.toggle-subcommands');
-                            const isHidden = treeView.classList.toggle('hidden');
-                            toggleButton.textContent = isHidden ? '>' : 'v';
-                        }
-
-                        function toggleMerge(event) {
-                            if (event) {
-                                event.stopPropagation();
-                            }
-                            const treeView = document.getElementById('mergeTree');
-                            const header = document.getElementById('mergeHeader');
-                            const toggleButton = header.querySelector('.toggle-subcommands');
-                            const isHidden = treeView.classList.toggle('hidden');
-                            toggleButton.textContent = isHidden ? '>' : 'v';
-                        }
-
-                        function viewAllMergeConflicts() {
-                            const mergeTree = document.getElementById('mergeTree');
-                            const files = Array.from(mergeTree.querySelectorAll('.file-item'))
-                                .map(item => item.querySelector('.file-name').textContent);
-                            
-                            vscode.postMessage({
-                                command: 'viewAllChanges',
-                                files: files,
-                                isConflicted: true
-                            });
-                        }
-
-                        function openMergeEditor(filePath) {
-                            vscode.postMessage({
-                                command: 'openMergeEditor',
-                                file: filePath
-                            });
-                        }
-                        console.log(\`Script loaded\`);
-
-                        // JavaScript to handle collapsible sections
-                        document.querySelectorAll('.collapsible-header').forEach(header => {
-                            header.addEventListener('click', () => {
-                                const content = header.nextElementSibling;
-                                content.style.display = content.style.display === 'block' ? 'none' : 'block';
-                            });
+                    // Add repository and branch change handlers
+                    document.getElementById('repoSelect')?.addEventListener('change', function(e) {
+                        vscode.postMessage({
+                            command: 'switchRepository',
+                            path: e.target.value
                         });
-                    </script>
-                </body>
-            </html>
+                    });
+
+                    document.getElementById('branchSelect')?.addEventListener('change', function(e) {
+                        vscode.postMessage({
+                            command: 'switchBranch',
+                            branch: e.target.value
+                        });
+                    });
+
+                    let pendingAction = null;
+
+                    function showModal(action, message) {
+                        pendingAction = action;
+                        document.getElementById('modalContent').textContent = message;
+                        document.getElementById('confirmModal').style.display = 'block';
+                    }
+
+                    function closeModal() {
+                        pendingAction = null;
+                        document.getElementById('confirmModal').style.display = 'none';
+                    }
+
+                    function confirmModal() {
+                        if (pendingAction) {
+                            pendingAction();
+                        }
+                        closeModal();
+                    }
+
+                    function stageAllFiles() {
+                        const changesTree = document.getElementById('changesTree');
+                        if (changesTree) {
+                            const fileItems = Array.from(changesTree.querySelectorAll('.file-item'));
+                            const files = fileItems
+                                .map(item => item.querySelector('.file-name')?.getAttribute('title'))
+                                .filter(path => path); // Filter out any undefined/null values
+                            
+                            if (files.length > 0) {
+                                vscode.postMessage({
+                                    command: 'stage',
+                                    files: files
+                                });
+                            }
+                        }
+                    }
+
+                    function unstageAllFiles() {
+                        const stagedTree = document.getElementById('stagedTree');
+                        if (stagedTree) {
+                            const fileItems = Array.from(stagedTree.querySelectorAll('.file-item'));
+                            const files = fileItems
+                                .map(item => item.querySelector('.file-name')?.getAttribute('title'))
+                                .filter(path => path); // Filter out any undefined/null values
+                            
+                            if (files.length > 0) {
+                                vscode.postMessage({
+                                    command: 'unstage',
+                                    files: files
+                                });
+                            }
+                        }
+                    }
+
+                    function discardAllFiles() {
+                        const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
+                            .map(item => item.getAttribute('data-file'));
+                        if (unstagedFiles.length > 0) {
+                            showModal(
+                                () => vscode.postMessage({
+                                    command: 'discard',
+                                    files: unstagedFiles
+                                }),
+                                'Are you sure you want to discard changes in all files?'
+                            );
+                        }
+                    }
+
+                    function viewAllChanges(isStaged) {
+                        const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
+                            .map(item => item.getAttribute('data-file'));
+
+                        vscode.postMessage({
+                            command: 'viewAllChanges',
+                            files: files,
+                            isStaged: isStaged
+                        });
+                    }
+
+                    function viewFileChanges(filePath, isStaged) {
+                        vscode.postMessage({
+                            command: 'viewFileChanges',
+                            filePath: filePath,
+                            isStaged: isStaged
+                        });
+                    }
+
+                    // Custom encode function to handle quotes
+                    function encodeShellCmd(cmd) {
+                        return cmd
+                            .replace(/'/g, '%27')  // Single quotes
+                            .replace(/"/g, '%22')  // Double quotes
+                            .replace(/\\\\/g, '%5C'); // Backslashes
+                    }
+
+                    let isTreeView = true;
+                    function toggleViewMode() {
+                        isTreeView = !isTreeView;
+                        const todoTree = document.getElementById('todoTreeView');
+                        const button = document.getElementById('viewToggleButton');
+                        
+                        if (isTreeView) {
+                            todoTree.classList.remove('list-view');
+                            todoTree.classList.add('tree-view');
+                            button.textContent = '🌳';
+                        } else {
+                            todoTree.classList.remove('tree-view');
+                            todoTree.classList.add('list-view');
+                            button.textContent = '📝';
+                        }
+                        
+                        // Refresh the current view
+                        updateTodoTree(currentTodoItems);
+                    }
+
+                    let currentTodoItems = [];
+                    function updateTodoTree(items) {
+                        currentTodoItems = items;
+                        const todoItems = document.getElementById('todoItems');
+                        
+                        if (isTreeView) {
+                            // Render as tree
+                            todoItems.innerHTML = renderTodoTree(items);
+                        } else {
+                            // Render as list
+                            todoItems.innerHTML = renderTodoList(items);
+                        }
+                    }
+
+                    function openTodoFile(filePath, line) {
+                        // Send a message to the extension to open the file at the specified line
+                        vscode.postMessage({
+                            command: 'openFile',
+                            filePath: filePath,
+                            line: line
+                        });
+                    }
+                            
+                    function renderTodoTree(items, level = 0) {
+                        return items.map(item => \`
+                            <div class="todo-item" style="margin-left: \${level * 20}px">
+                                <span class="todo-icon">📌</span>
+                                <span class="todo-text" title="\${item.file}:\${item.line}">\${item.text}</span>
+                                <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
+                                \${item.children ? renderTodoTree(item.children, level + 1) : ''}
+                            </div>
+                        \`).join('');
+                    }
+
+                    function renderTodoList(items) {
+                        return items.map(item => \`
+                            <div class="todo-item">
+                                <span class="todo-icon" title="\${item.file}:\${item.line}">📌</span>
+                                <span class="todo-text">\${item.text}</span>
+                                <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
+                            </div>
+                        \`).join('');
+                    }
+
+                    function updateTasksStatus(status) {
+                        const statusElement = document.getElementById('tasksStatus');
+                        if (statusElement) {
+                            let statusText = \`\${status.total} tasks\`;
+                            let statusClass = '';
+                            
+                            if (status.running > 0) {
+                                statusText += \` (\${status.running} running)\`;
+                                statusClass = 'has-running';
+                            }
+                            if (status.failed > 0) {
+                                statusText += \` (\${status.failed} failed)\`;
+                                statusClass = 'has-error';
+                            }
+                            
+                            statusElement.textContent = statusText;
+                            statusElement.className = \`tasks-status \${statusClass}\`;
+                        }
+                    }
+
+                    function toggleProjectTasks() {
+                        const treeView = document.getElementById('smartTasksTreeView');
+                        const header = document.getElementById('projectTasksHeader');
+                        const toggleButton = header.querySelector('.toggle-subcommands');
+                        const isHidden = treeView.classList.toggle('hidden');
+                        toggleButton.textContent = isHidden ? '>' : 'v';
+                    }
+
+                    function toggleChanges(event) {
+                        if (event) {
+                            event.stopPropagation();
+                        }
+                        const treeView = document.getElementById('changesTree');
+                        const header = document.getElementById('changesHeader');
+                        const toggleButton = header.querySelector('.toggle-subcommands');
+                        const isHidden = treeView.classList.toggle('hidden');
+                        toggleButton.textContent = isHidden ? '>' : 'v';
+                    }
+
+                    function toggleStaged(event) {
+                        if (event) {
+                            event.stopPropagation();
+                        }
+                        const treeView = document.getElementById('stagedTree');
+                        const header = document.getElementById('stagedHeader');
+                        const toggleButton = header.querySelector('.toggle-subcommands');
+                        const isHidden = treeView.classList.toggle('hidden');
+                        toggleButton.textContent = isHidden ? '>' : 'v';
+                    }
+
+                    function toggleMerge(event) {
+                        if (event) {
+                            event.stopPropagation();
+                        }
+                        const treeView = document.getElementById('mergeTree');
+                        const header = document.getElementById('mergeHeader');
+                        const toggleButton = header.querySelector('.toggle-subcommands');
+                        const isHidden = treeView.classList.toggle('hidden');
+                        toggleButton.textContent = isHidden ? '>' : 'v';
+                    }
+
+                    function viewAllMergeConflicts() {
+                        const mergeTree = document.getElementById('mergeTree');
+                        const files = Array.from(mergeTree.querySelectorAll('.file-item'))
+                            .map(item => item.querySelector('.file-name').textContent);
+                        
+                        vscode.postMessage({
+                            command: 'viewAllChanges',
+                            files: files,
+                            isConflicted: true
+                        });
+                    }
+
+                    function openMergeEditor(filePath) {
+                        vscode.postMessage({
+                            command: 'openMergeEditor',
+                            file: filePath
+                        });
+                    }
+                    console.log(\`Script loaded\`);
+
+                    // JavaScript to handle collapsible sections
+                    document.querySelectorAll('.collapsible-header').forEach(header => {
+                        header.addEventListener('click', () => {
+                            const content = header.nextElementSibling;
+                            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                        });
+                    });
+
+                    document.getElementById('copyCommitButton').addEventListener('click', () => {
+                        // Show dialog to select target branch
+                        showBranchSelectionDialog('commit');
+                    });
+
+                    document.getElementById('copyStagedButton').addEventListener('click', () => {
+                        // Show dialog to select target branch
+                        showBranchSelectionDialog('staged');
+                    });
+
+                    function showBranchSelectionDialog(action) {
+                        const branches = ['branch1', 'branch2', 'branch3']; // Replace with actual branch names
+                        const currentBranch = 'currentBranch'; // Replace with the actual current branch name
+
+                        // Create a dialog to select the target branch
+                        const dialog = document.createElement('div');
+                        dialog.innerHTML = \`
+                            <h3>Select Target Branch</h3>
+                            <select id="branchSelect">
+                                \${branches.filter(branch => branch !== currentBranch).map(branch => \`<option value="\${branch}">\${branch}</option>\`).join('')}
+                            </select>
+                            <button id="confirmButton">Confirm</button>
+                            <button id="cancelButton">Cancel</button>
+                        \`;
+                        document.body.appendChild(dialog);
+
+                        document.getElementById('confirmButton').addEventListener('click', () => {
+                            const selectedBranch = document.getElementById('branchSelect').value;
+                            if (action === 'commit') {
+                                copyCommitToBranch(selectedBranch);
+                            } else if (action === 'staged') {
+                                copyStagedFilesToBranch(selectedBranch);
+                            }
+                            document.body.removeChild(dialog); // Remove dialog after selection
+                        });
+
+                        document.getElementById('cancelButton').addEventListener('click', () => {
+                            document.body.removeChild(dialog); // Remove dialog on cancel
+                        });
+                    }
+
+                    async function copyCommitToBranch(branch: string) {
+                        const git = simpleGit();
+                        const commitMessage = 'Your commit message'; // You can prompt the user for this
+
+                        try {
+                            // Commit staged files
+                            await git.add('./*'); // Add all staged files
+                            await git.commit(commitMessage); // Commit the staged files
+                            vscode.window.showInformationMessage('Staged files committed successfully.');
+
+                            // Switch to the target branch
+                            await git.checkout(branch); // Switch to the target branch
+                            await git.pull(); // Update the branch with the latest changes
+
+                            // Logic to copy the committed files (e.g., cherry-pick the last commit)
+                            await git.cherryPick('HEAD'); // Cherry-pick the last commit
+                            vscode.window.showInformationMessage(\`Committed files copied to branch: \${branch}\`);
+                        } catch (error) {
+                            if (error instanceof Error) {
+                                vscode.window.showErrorMessage(\`Failed to commit and copy: \${error.message}\`);
+                            } else {
+                                vscode.window.showErrorMessage('Failed to commit and copy: Unknown error occurred.');
+                            }
+                        }
+                    }
+
+                    async function copyStagedFilesToBranch(branch: string) {
+                        // Logic to copy staged files to the specified branch
+                    }
+
+                    document.getElementById('commitAndCopyButton').addEventListener('click', () => {
+                        // Show dialog to select target branch
+                        showBranchSelectionDialog();
+                    });
+
+                    async function commitStagedFiles() {
+                        // Logic to commit staged files
+                    }
+
+                    async function copyCommittedFilesToBranch(branch: string) {
+                        // Logic to copy committed files to the specified branch
+                    }
+
+                    function showBranchSelectionDialog() {
+                        const branches = ['branch1', 'branch2', 'branch3']; // Replace with actual branch names
+                        const currentBranch = 'currentBranch'; // Replace with the actual current branch name
+
+                        // Create a dialog to select the target branch
+                        const dialog = document.createElement('div');
+                        dialog.innerHTML = \`
+                            <h3>Select Target Branch</h3>
+                            <select id="branchSelect">
+                                \${branches.filter(branch => branch !== currentBranch).map(branch => \`<option value="\${branch}">\${branch}</option>\`).join('')}
+                            </select>
+                            <button id="confirmButton">Confirm</button>
+                            <button id="cancelButton">Cancel</button>
+                        \`;
+                        document.body.appendChild(dialog);
+
+                        document.getElementById('confirmButton').addEventListener('click', () => {
+                            const selectedBranch = document.getElementById('branchSelect').value;
+                            commitAndCopyToBranch(selectedBranch);
+                            document.body.removeChild(dialog); // Remove dialog after selection
+                        });
+
+                        document.getElementById('cancelButton').addEventListener('click', () => {
+                            document.body.removeChild(dialog); // Remove dialog on cancel
+                        });
+                    }
+
+                    function commitAndCopyToBranch(branch) {
+                        // Logic to commit staged files and copy to the selected branch
+                        vscode.postMessage({ command: 'commitAndCopy', branch: branch });
+                    }
+                </script>
+            </body>
+        </html>
         `;
+    }
+
+    public async commitAndCopyToBranch(branch: string) {
+        const git = simpleGit();
+        const commitMessage = 'Your commit message'; // You can prompt the user for this
+
+        try {
+            // Commit staged files
+            await git.add('./*'); // Add all staged files
+            await git.commit(commitMessage); // Commit the staged files
+            vscode.window.showInformationMessage('Staged files committed successfully.');
+
+            // Switch to the target branch
+            await git.checkout(branch); // Switch to the target branch
+            await git.pull(); // Update the branch with the latest changes
+
+            // Logic to copy the committed files (e.g., cherry-pick the last commit)
+            await git.cherryPick('HEAD'); // Cherry-pick the last commit
+            vscode.window.showInformationMessage(`Committed files copied to branch: ${branch}`);
+        } catch (error) {
+            if (error instanceof Error) {
+                vscode.window.showErrorMessage(`Failed to commit and copy: ${error.message}`);
+            } else {
+                vscode.window.showErrorMessage('Failed to commit and copy: Unknown error occurred.');
+            }
+        }
     }
 
     // Git command implementations
