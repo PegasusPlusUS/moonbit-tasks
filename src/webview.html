@@ -43,6 +43,7 @@
             cursor: pointer;
             border: 1px solid #ccc;
             margin-top: 10px;
+            position: relative; /* For positioning buttons */
         }
         .collapsible-content {
             display: none;
@@ -58,9 +59,13 @@
             background-color: #007acc;
             color: white;
             cursor: pointer;
+            display: none; /* Hidden by default */
         }
         .action-button:hover {
             background-color: #005f99;
+        }
+        .staged-header:hover .action-button {
+            display: inline-block; /* Show buttons on hover */
         }
         .commit-message-input {
             width: 100%;
@@ -104,20 +109,28 @@
 
     <!-- Git Container -->
     <div id="gitContainer">
-        <div id="changesHeader" class="collapsible-header">Changes</div>
+        <div id="changesHeader" class="collapsible-header staged-header">Changes
+            <button class="action-button" id="viewAllButton">View All</button>
+            <button class="action-button" id="stageAllButton">Stage All</button>
+            <button class="action-button" id="discardAllButton">Discard All</button>
+        </div>
         <div id="changesContent" class="collapsible-content">
             <div class="file-actions">
                 <button class="action-button" id="cherryPickButton">CherryPick to Another Branch</button>
             </div>
         </div>
-        <div id="stagedHeader" class="collapsible-header">Staged Changes</div>
+        <div id="stagedHeader" class="collapsible-header staged-header">Staged Changes
+            <button class="action-button" id="viewAllStagedButton">View All</button>
+            <button class="action-button" id="commitStagedButton">Commit</button>
+            <button class="action-button" id="unstageAllButton">Unstage All</button>
+        </div>
         <div id="stagedContent" class="collapsible-content">
             <div class="file-actions">
                 <button class="action-button" id="commitAllStagedButton">Commit All Staged Files</button>
                 <input type="text" id="commitMessageInput" class="commit-message-input" placeholder="Enter commit message" />
             </div>
         </div>
-        <div id="mergeConflictsHeader" class="collapsible-header">Merge Conflicts</div>
+        <div id="mergeConflictsHeader" class="collapsible-header staged-header">Merge Conflicts</div>
         <div id="mergeConflictsContent" class="collapsible-content">
             <div class="file-actions">
                 <p>No merge conflicts detected.</p> <!-- Placeholder for merge conflicts -->
