@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="\${codiconsUri}" rel="stylesheet" />
+        <style>
+            /* General layout styles */
+            .panel-container {
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                gap: 12px;
+            }
+
+            .git-status {
+                display: inline-block;
+                width: 8px;
+                margin-right: 4px;
+                color: var(--vscode-gitDecoration-modifiedResourceForeground);
+                font-family: monospace;
+                font-weight: bold;
+            }
+
+            .git-status.Modified { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+            .git-status.Added { color: var(--vscode-gitDecoration-addedResourceForeground); }
+            .git-status.Deleted { color: var(--vscode-gitDecoration-deletedResourceForeground); }
+            .git-status.Renamed { color: var(--vscode-gitDecoration-modifiedResourceForeground); }
+            .git-status.Untracked { color: var(--vscode-gitDecoration-untrackedResourceForeground); }
+
+            /*.tree-item {*/
+            /*    display: flex;*/
+            /*    align-items: center;*/
+            /*    padding: 4px 8px;*/
+            /*}*/
+
+            .tree-children {
+                margin-left: 20px; /* Indent submenu items */
+                border-left: 1px dashed #ccc; /* Optional visual indicator */
+                padding-left: 10px;
+            }
+
+            .tree-item {
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                padding: 5px;
+                border: 1px solid #ddd;
+                margin: 2px 0;
+            }
+
+            .toggle-subcommands {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 2px 4px;
+                color: var(--vscode-foreground);
+                opacity: 0.8;
+            }
+
+            .toggle-subcommands:hover {
+                opacity: 1;
+            }
+
+            .subcommands {
+                margin-left: 20px;
+                padding-left: 10px;
+                border-left: 1px solid var(--vscode-widget-border);
+                display: block;
+            }
+
+            .subcommands.hidden {
+                display: none;
+            }
+
+            .tree-item-label {
+                margin-left: 5px;
+            }
+
+            .git-panel, .smart-tasks-panel {
+                flex: 1;
+                overflow-y: auto;
+                border: 1px solid var(--vscode-panel-border);
+                border-radius: 4px;
+                margin: 4px;
+            }
+
+            .section-header {
+                padding: 2px 4px;
+                font-weight: bold;
+                color: var(--vscode-foreground);
+                background: var(--vscode-sideBar-background);
+                position: sticky;
+                top: 0;
+                z-index: 1;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .section-header:hover {
+                background: var(--vscode-list-hoverBackground);
+            }
+
+            .header-content {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .tree-view.hidden {
+                display: none;
+            }
+
+            .file-tree {
+                margin: 0;
+                padding: 0;
+            }
+
+            .file-item {
+                position: relative;
+                display: flex; /* Use flexbox for alignment */
+                align-items: center; /* Center items vertically */
+            }
+
+            .change-icon {
+                margin-right: 8px; /* Space between icon and file name */
+                font-weight: bold; /* Make the icon bold */
+            }
+
+            .file-actions {
+                display: none; /* Initially hide the actions */
+                position: absolute;
+                right: 0;
+                top: 0;
+                background: white; /* Optional: background for better visibility */
+                border: 1px solid #ccc; /* Optional: border for better visibility */
+                z-index: 10; /* Ensure it appears above other elements */
+            }
+
+            .file-item:hover .file-actions {
+                display: flex; /* Show actions on hover */
+            }
+
+            .action-button {
+                margin-left: 5px; /* Space between buttons */
+            }
+
+            .git-status {
+                margin-left: 4px;
+                color: var(--vscode-gitDecoration-modifiedResourceForeground);
+            }
+
+            .tooltip {
+                position: absolute;
+                background: var(--vscode-editor-background);
+                border: 1px solid var(--vscode-widget-border);
+                padding: 4px 8px;
+                border-radius: 2px;
+                font-size: 12px;
+                z-index: 1000;
+                display: none;
+                white-space: nowrap;
+                top: 100%;
+                left: 0;
+            }
+
+            .file-item:hover .tooltip {
+                display: block;
+            }
+
+            .status-message {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 12px;
+                z-index: 1000;
+                display: none;
+            }
+
+            .status-message.error {
+                background: var(--vscode-inputValidation-errorBackground);
+                border: 1px solid var(--vscode-inputValidation-errorBorder);
+                color: var(--vscode-inputValidation-errorForeground);
+            }
+
+            .status-message.info {
+                background: var(--vscode-inputValidation-infoBackground);
+                border: 1px solid var(--vscode-inputValidation-infoBorder);
+                color: var(--vscode-inputValidation-infoForeground);
+            }
+
+            .button-container {
+                display: flex;
+                gap: 8px;
+                margin: 8px;
+                justify-content: space-between;
+            }
+
+            .button {
+                background-color: var(--vscode-button-background, #0E639C);
+                color: var(--vscode-button-foreground, #ffffff);
+                border: none;
+                padding: 4px 12px;
+                border-radius: 2px;
+                cursor: pointer;
+                font-size: 12px;
+                min-width: 80px;  /* Set minimum width for all buttons */
+                text-align: center;
+                flex: 1;         /* Make all buttons take equal space */
+                max-width: 100px; /* Set maximum width to prevent too wide buttons */
+            }
+
+            .button:hover {
+                background-color: var(--vscode-button-hoverBackground, #1177bb);
+            }
+
+            .button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            /* Keep the action buttons (+ - ��) styling separate */
+            .action-button {
+                padding: 2px 4px;
+                background: transparent;
+                border: none;
+                color: var(--vscode-foreground);
+                cursor: pointer;
+                font-size: 12px;
+                opacity: 0.8;
+            }
+
+            .action-button:hover {
+                opacity: 1;
+                background: var(--vscode-button-background);
+            }
+
+            .commit-area {
+                margin: 8px;
+            }
+
+            #commitMessage {
+                width: calc(100% - 16px);  /* Full width minus margins */
+                padding: 4px 8px;
+                margin-bottom: 8px;
+                background: var(--vscode-input-background);
+                color: var(--vscode-input-foreground);
+                border: 1px solid var(--vscode-input-border);
+                border-radius: 2px;
+                font-family: inherit;
+                font-size: 12px;
+                resize: vertical;
+                min-height: 24px;
+            }
+
+            .button-container {
+                display: flex;
+                gap: 8px;
+                margin: 8px;
+                justify-content: space-between;
+            }
+
+            .header-icon-fixed {
+                width: 24px;          /* Set explicit width */
+                height: 24px;         /* Set explicit height */
+                margin-right: 8px;    /* Space between icon and text */
+                vertical-align: middle; /* Align with text */
+            }
+
+            /* Or if you want to make it responsive */
+            .header-icon {
+                width: 1.5em;         /* Relative to font size */
+                height: 1.5em;
+                margin-right: 0.5em;
+            }
+
+            /* If you need to preserve aspect ratio */
+            .header-icon-adaptive {
+                width: 24px;
+                height: auto;         /* Maintain aspect ratio */
+                max-height: 24px;     /* Prevent too tall */
+            }
+
+            .header-controls {
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                padding: 2px 0;
+            }
+
+            .dropdown-container {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                flex: 1;  /* Take up available space */
+            }
+
+            .select-control {
+                background: var(--vscode-dropdown-background);
+                color: var(--vscode-dropdown-foreground);
+                border: 1px solid var(--vscode-dropdown-border);
+                padding: 2px 4px;
+                border-radius: 2px;
+                font-size: 12px;
+                min-width: 60px;
+            }
+
+            /* Add styles for unselected branch state */
+            .select-control.no-branch-selected {
+                border-color: var(--vscode-inputValidation-errorBorder);
+                background-color: var(--vscode-inputValidation-errorBackground);
+            }
+
+            .select-control:hover {
+                cursor: pointer;
+            }
+
+            .modal-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1000;
+            }
+
+            .modal {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: var(--vscode-editor-background);
+                padding: 16px;
+                border-radius: 4px;
+                border: 1px solid var(--vscode-widget-border);
+                min-width: 300px;
+                z-index: 1001;
+            }
+
+            .modal-content {
+                margin-bottom: 16px;
+                color: var(--vscode-foreground);
+            }
+
+            .modal-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+            }
+
+            .modal-button {
+                padding: 4px 12px;
+                border-radius: 2px;
+                border: none;
+                cursor: pointer;
+            }
+
+            .modal-button-primary {
+                background-color: var(--vscode-button-background);
+                color: var(--vscode-button-foreground);
+            }
+
+            .modal-button-secondary {
+                background-color: var(--vscode-button-secondaryBackground);
+                color: var(--vscode-button-secondaryForeground);
+            }
+
+            .file-icon {
+                width: 16px;
+                height: 16px;
+            }
+
+            .codicon {
+                font-family: codicon;
+                font-size: 16px;
+                line-height: 16px;
+            }
+
+            .action-button.has-updates {
+                color: var(--vscode-gitDecoration-untrackedResourceForeground);
+                font-weight: bold;
+            }
+
+            /* Make sure nested subcommands follow the same style */
+            .subcommands .tree-item {
+                margin-left: 0;  /* Reset margin for nested items */
+            }
+
+            .subcommands .subcommands {
+                margin-left: 20px;  /* Consistent indentation for all levels */
+            }
+
+            .view-toggle-button {
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 4px 8px;
+                color: var(--vscode-titleBar-activeForeground);
+                opacity: 0.7;
+            }
+            
+            .view-toggle-button:hover {
+                opacity: 1;
+            }
+
+            .view-toggle-button.active {
+                opacity: 1;
+                background-color: var(--vscode-titleBar-activeBackground);
+            }
+
+            /* Styles for TODO tree view */
+            .todo-tree {
+                margin-top: 10px;
+                padding: 5px;
+            }
+
+            .todo-item {
+                display: flex;
+                align-items: center;
+                padding: 3px;
+                margin: 2px 0;
+            }
+
+            .todo-tree.list-view .todo-item {
+                margin-left: 0 !important;
+            }
+
+            .todo-tree.tree-view .todo-item {
+                margin-left: 20px;
+            }
+
+            .header-status {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .tasks-status {
+                font-size: 0.9em;
+                opacity: 0.8;
+                color: var(--vscode-descriptionForeground);
+            }
+
+            .tasks-status.has-running {
+                color: var(--vscode-progressBar-background);
+            }
+
+            .tasks-status.has-error {
+                color: var(--vscode-errorForeground);
+            }
+
+            .file-tree.hidden {
+                display: none !important;
+            }
+
+            /* Example CSS for collapsible sections */
+            .collapsible {
+                border: 1px solid #ccc;
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+
+            .collapsible-header {
+                background-color: #f4f4f4;
+                cursor: pointer;
+            }
+
+            .collapsible-content {
+                display: none; /* Initially hide content */
+            }
+        </style>
+    </head>
+    <body>
+        <div class="title-bar">
+            <button id="viewToggleButton" class="view-toggle-button" onclick="toggleViewMode()" title="Toggle Tree/List View">
+                🌳
+            </button>
+            <div class="dropdown-container">
+                <select id="repoSelect" display='none' class="select-control" title="Select Repository">
+                    <!-- Repositories will be populated here -->
+                </select><span id="branchIcon" class="codicon codicon-git-branch"></span>
+                <select id="branchSelect" display='none' class="select-control" title="Select Branch">
+                    <!-- Branches will be populated here -->
+                </select>
+            </div>
+        </div>
+
+        <!-- Changes section -->
+        <div id="changesHeader" class="section-header collapsible" onclick="toggleChanges()">
+            <div class="header-content">
+                <span>Changes</span>
+                <div class="header-actions">
+                    <button onclick="stageAll()" title="Stage All">Stage All</button>
+                    <button onclick="fetchChanges()" title="Fetch Changes">Fetch</button>
+                </div>
+            </div>
+            <div class="file-actions">
+                <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
+                <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                <button class="toggle-subcommands">></button>
+            </div>
+        </div>
+        <div id="changesTree" class="file-tree collapsible-content">
+            <!-- Changed files will be populated here -->
+        </div>
+
+        <!-- Staged section -->
+        <div id="stagedHeader" class="section-header collapsible" onclick="toggleStaged()">
+            <div class="header-content">
+                <span>Staged Changes</span>
+                <div class="header-actions">
+                    <button onclick="unstageAll()" title="Unstage All">Unstage All</button>
+                </div>
+            </div>
+            <div class="file-actions">
+                <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
+                <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                <button class="toggle-subcommands">></button>
+            </div>
+        </div>
+        <div id="stagedTree" class="file-tree collapsible-content">
+            <!-- Staged files will be populated here -->
+        </div>
+
+        <!-- Commit Area -->
+        <div class="commit-area" display="none">
+            <textarea id="commitMessage" placeholder="Enter commit message..." rows="1"></textarea>
+        </div>
+
+        <div id="statusMessage" display='none' class="status-message"></div>
+
+        <div class="section-header" id="projectTasksHeader" onclick="toggleProjectTasks()">
+            <div class="header-content">
+                <img id="headerIcon" class="header-icon" src="\${iconUri}" alt="Project Tasks"/>
+                <span id="projectNameSpan"></span>
+                <span> Project Tasks</span>
+            </div>
+            <div class="header-status">
+                <span id="tasksStatus" class="tasks-status"></span>
+                <button class="toggle-subcommands">></button>
+            </div>
+        </div>
+        <div id="smartTasksTreeView" class="tree-view">
+            <!-- Smart Tasks tree items will be populated here -->
+        </div>
+
+        <div id="confirmModal" display='none' class="modal-overlay">
+            <div class="modal">
+                <div id="modalContent" class="modal-content">
+                    Are you sure you want to discard changes in this file?
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-button modal-button-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="modal-button modal-button-primary" onclick="confirmModal()">Discard</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="todo-tree tree-view" id="todoTreeView">
+            <div class="section-header">
+                <span>TODO Items</span>
+            </div>
+            <div id="todoItems">
+                <!-- TODO items will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Merge Conflicts section -->
+        <div id="mergeHeader" class="section-header collapsible" onclick="toggleMerge()">
+            <div class="header-content">
+                <span>Merge Conflicts</span>
+            </div>
+            <div class="file-actions">
+                <button class="action-button" onclick="viewAllMergeConflicts()" title="View All Conflicts">🔍</button>
+                <button class="toggle-subcommands">></button>
+            </div>
+        </div>
+        <div id="mergeTree" class="file-tree collapsible-content">
+            <!-- Merge conflict files will be populated here -->
+        </div>
+
+        <div id="changesHeader" class="collapsible-header">Changes Header</div>
+        <div id="changesContent" class="collapsible-content">
+            <div class="file-actions">
+                <button class="action-button" id="cherryPickButton">CherryPick to Another Branch</button>
+            </div>
+        </div>
+
+        <script>
+            const vscode = acquireVsCodeApi();
+            function showError(message) {
+                const statusArea = document.getElementById('statusArea');
+                statusArea.textContent = message;
+                statusArea.className = 'error';
+                // Auto-hide after 5 seconds
+                setTimeout(() => {
+                    statusArea.style.display = 'none';
+                }, 5000);
+            }
+
+            function showInfo(message) {
+                const statusArea = document.getElementById('statusArea');
+                statusArea.textContent = message;
+                statusArea.className = 'info';
+                // Auto-hide after 3 seconds
+                setTimeout(() => {
+                    statusArea.style.display = 'none';
+                }, 3000);
+            }
+
+            function showMessage(message, type = 'info') {
+                const statusMessage = document.getElementById('statusMessage');
+                statusMessage.textContent = message;
+                statusMessage.className = 'status-message ' + type;
+                statusMessage.style.display = 'block';
+
+                // Auto-hide after a delay
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, type === 'error' ? 5000 : 3000); // Show errors longer than info messages
+            }
+
+            let smartTaskTreeUpdated = false;
+
+            // Update the message handler
+            window.addEventListener('message', event => {
+                const message = event.data;
+                switch (message.type) {
+                    case 'getCommitMessage':
+                        gitCommit();
+                        break;
+                    case 'updateSmartTasksTree':
+                        smartTaskTreeUpdated = true;
+                        updateSmartTasksTreeView(message.projectName, message.iconUri, message.items);
+                        updateTasksStatus(message.status);
+                        break;
+                    case 'gitChanges':
+                        updateGitChangesFileTree(message.changes);
+                        updateGitButtonStates(
+                            message.hasStagedChanges,
+                            message.hasUnstagedChanges,
+                            message.hasUnpushedCommits,
+                            message.hasUnpulledCommits
+                        );
+                        updateRepositoryAndBranchLists(
+                            message.repositories,
+                            message.branches,
+                            message.currentRepo,
+                            message.currentBranch
+                        );
+                        break;
+                    case 'error':
+                        showMessage(message.message, 'error');
+                        break;
+                    case 'info':
+                        showMessage(message.message, 'info');
+                        break;
+                    case 'updateTodoTree':
+                        console.log(\`updateTodoTree, \${message.items}\`);
+                        updateTodoTree(message.items);
+                        break;
+                }
+            });
+
+            function gitPull() {
+                vscode.postMessage({ command: 'pull' });
+            }
+
+            function gitFetch() {
+                vscode.postMessage({ command: 'fetch' });
+            }
+
+            function updateGitButtonStates(hasStagedChanges, hasUnstagedChanges, hasUnpushedCommits) {
+                const commitMessage = document.getElementById('commitMessage');
+
+                if (commitMessage) {
+                    commitMessage.disabled = !hasStagedChanges;
+                }
+            }
+
+            function getFileName(fullpath) {
+                return fullpath.split(/[\\\\/]/).pop();
+            }
+
+            function doubleEscape(str) {
+                return str.replace(/\\\\/g, '\\\\\\\\');
+            }
+
+            function updateGitChangesFileTree(changes) {
+                const changesTree = document.getElementById('changesTree');
+                const stagedTree = document.getElementById('stagedTree');
+                const mergeTree = document.getElementById('mergeTree');
+                const commitArea = document.querySelector('.commit-area');
+
+                // Remember the current toggle states
+                const changesHidden = changesTree.classList.contains('hidden');
+                const stagedHidden = stagedTree.classList.contains('hidden');
+                const mergeHidden = mergeTree.classList.contains('hidden');
+
+                // Separate changes into categories
+                const unstagedChanges = changes.filter(file => !file.staged && !file.conflicted);
+                const stagedChanges = changes.filter(file => file.staged && !file.conflicted);
+                const mergeConflicts = changes.filter(file => file.conflicted);
+
+                // Update Changes section
+                updateSection('changes', unstagedChanges, changesHidden);
+                
+                // Update Staged section
+                updateSection('staged', stagedChanges, stagedHidden);
+                
+                // Update Merge Conflicts section
+                updateSection('merge', mergeConflicts, mergeHidden);
+
+                // Show/hide commit area based on staged changes
+                if (commitArea) {
+                    commitArea.style.display = stagedChanges.length > 0 ? 'block' : 'none';
+                }
+
+                // Populate the trees with files
+                populateFileTree(changesTree, unstagedChanges, false);
+                populateFileTree(stagedTree, stagedChanges, true);
+                populateFileTree(mergeTree, mergeConflicts, false, true);
+            }
+
+            function updateSection(type, files, isHidden) {
+                const header = document.getElementById(\`\${type}Header\`);
+                const tree = document.getElementById(\`\${type}Tree\`);
+                
+                if (header && tree) {
+                    if (files.length > 0) {
+                        header.style.display = 'flex';
+                        tree.style.display = 'block';
+                        
+                        let actionButtons = '';
+                        switch(type) {
+                            case 'changes':
+                                actionButtons = \`
+                                    <button class="action-button" onclick="viewAllChanges(false)" title="View All Changes">🔍</button>
+                                    <button class="action-button" onclick="stageAllFiles()" title="Stage All Changes">+</button>
+                                    <button class="action-button" onclick="discardAllFiles()" title="Discard All Changes">⨯</button>
+                                \`;
+                                break;
+                            case 'staged':
+                                actionButtons = \`
+                                    <button class="action-button" onclick="viewAllChanges(true)" title="View All Changes">🔍</button>
+                                    <button class="action-button" onclick="unstageAllFiles()" title="Unstage All Changes">-</button>
+                                \`;
+                                break;
+                            case 'merge':
+                                actionButtons = \`
+                                    <button class="action-button" onclick="viewAllMergeConflicts()" title="View All Conflicts">🔍</button>
+                                \`;
+                                break;
+                        }
+
+                        const headerContent = \`
+                            <div class="header-content">
+                                <span>\${type === 'merge' ? 'Merge Conflicts' : type === 'staged' ? 'Staged Changes' : 'Changes'} (\${files.length})</span>
+                            </div>
+                            <div class="file-actions">
+                                \${actionButtons}
+                                <button class="toggle-subcommands">\${isHidden ? '>' : 'v'}</button>
+                            </div>
+                        \`;
+                        header.innerHTML = headerContent;
+                        
+                        // Restore hidden state if it was hidden
+                        if (isHidden) {
+                            tree.classList.add('hidden');
+                        } else {
+                            tree.classList.remove('hidden');
+                        }
+                    } else {
+                        header.style.display = 'none';
+                        tree.style.display = 'none';
+                    }
+                }
+            }
+
+            function populateFileTree(container, files, isStaged, isConflicted = false) {
+                if (!container) return;
+
+                const fileList = files.map(file => {
+                    const changeIcon = getChangeIcon(file.status); // Function to determine the icon based on file status
+                    const actions = isConflicted ? \`
+                        <button class="action-button" onclick="viewFileChanges('\${file.path}', \${isStaged})" title="View Changes">🔍</button>
+                        <button class="action-button" onclick="openMergeEditor('\${file.path}')" title="Resolve Conflict">⚔️</button>
+                    \` : isStaged ? \`
+                        <button class="action-button" onclick="viewFileChanges('\${file.path}', true)" title="View Changes">🔍</button>
+                        <button class="action-button" onclick="unstageFile('\${file.path}')" title="Unstage Changes">-</button>
+                    \` : \`
+                        <button class="action-button" onclick="viewFileChanges('\${file.path}', false)" title="View Changes">🔍</button>
+                        <button class="action-button" onclick="stageFile('\${file.path}')" title="Stage Changes">+</button>
+                        <button class="action-button" onclick="discardFile('\${file.path}')" title="Discard Changes">⨯</button>
+                    \`;
+
+                    return \`
+                        <div class="file-item">
+                            <span class="change-icon">\${changeIcon}</span> <!-- Always show the change icon -->
+                            <span class="file-name" title="\${file.path}">\${getFileName(file.path)}</span>
+                            <div class="file-actions">
+                                \${actions}
+                            </div>
+                        </div>
+                    \`;
+                }).join('');
+
+                container.innerHTML = fileList;
+            }
+
+            // Move the interval setup outside of any function
+            // and make sure it runs when the page loads
+            (function setupAutoRefresh() {
+                let intervalID;
+
+                function startInterval(delay) {
+                    if (intervalID) {
+                        console.log(\`Clear interval \${intervalID}\`);
+                        clearInterval(intervalID);
+                    }
+
+                    console.log(\`Setting up auto-refresh interval \${delay}ms\`);
+                    intervalID = setInterval(() => {
+                        // if smartTaskTreeView updated and git branch init OK, reduce interval to 60s
+                        const branchSelect = document.getElementById('branchSelect');
+                        if (smartTaskTreeUpdated && branchSelect && branchSelect.style.display != 'none') {
+                            startInterval(60000);
+                        }
+
+                        console.log('Auto-refresh: Getting changes');
+                        vscode.postMessage({ command: 'getChanges' });
+                    }, delay);
+                }
+
+                startInterval(1000);
+            })();
+
+            function gitStage() {
+                const checkedFiles = Array.from(document.querySelectorAll('.file-item input[type="checkbox"]:checked:not([disabled])'))
+                    .map(cb => cb.getAttribute('data-file'));
+                if (checkedFiles.length > 0) {
+                    vscode.postMessage({
+                        command: 'stage',
+                        files: checkedFiles
+                    });
+                }
+            }
+
+            function gitCommit() {
+                const message = document.getElementById('commitMessage').value;
+                if (message.trim()) {
+                    vscode.postMessage({
+                        command: 'commit',
+                        message: message
+                    });
+                    document.getElementById('commitMessage').value = ''; // Clear message after commit
+                } else {
+                    showError('Please enter a commit message');
+                }
+            }
+
+            async function cherryPickToBranch(branch: string) {
+                const git = simpleGit();
+                const commitMessage = 'Your commit message'; // You can prompt the user for this
+                const currentBranch = await git.branch().then(branches => branches.current); // Get the current branch
+
+                try {
+                    // Commit staged files
+                    await git.add('./*'); // Add all staged files
+                    await git.commit(commitMessage); // Commit the staged files
+                    vscode.window.showInformationMessage('Staged files committed successfully.');
+
+                    // Switch to the target branch
+                    await git.checkout(branch); // Switch to the target branch
+                    await git.pull(); // Update the branch with the latest changes
+
+                    // Logic to copy the committed files (e.g., cherry-pick the last commit)
+                    await git.cherryPick('HEAD'); // Cherry-pick the last commit
+                    vscode.window.showInformationMessage(\`Committed files copied to branch:\${branch}\`);
+
+                    // Restore the original branch
+                    await git.checkout(currentBranch); // Switch back to the original branch
+                    vscode.window.showInformationMessage(\`Switched back to branch: \${currentBranch}\`);
+                } catch (error) {
+                    if (error instanceof Error) {
+                        vscode.window.showErrorMessage(\`Failed to CherryPick: \${error.message}\`);
+                    } else {
+                        vscode.window.showErrorMessage('Failed to CherryPick: Unknown error occurred.');
+                    }
+                }
+            }
+
+            function gitPush() {
+                vscode.postMessage({
+                    command: 'push',
+                    message: ''
+                });
+            }
+
+            function getGitChanges() {
+                vscode.postMessage({ command: 'getChanges' });
+            }
+
+            function toggleSubmenu(element) {
+                const childrenContainer = element.querySelector('.tree-children');
+                if (childrenContainer) {
+                    childrenContainer.style.display = childrenContainer.style.display === 'none' ? 'block' : 'none';
+                }
+            }
+
+            // Update rendering logic to attach toggle:
+            function renderTreeItems(items) {
+                if (!items || !Array.isArray(items)) return '';
+
+                return items.map(function(item) {
+                    const hasChildren = item.children && item.children.length > 0;
+                    const childrenHtml = hasChildren
+                        ? \`<div class="tree-children">\${renderTreeItems(item.children)}</div>\`
+                        : '';
+
+                    return \`
+                        <div class="tree-item" data-id="\${item.shellCmd}" onclick="\${hasChildren ? 'toggleSubmenu(this)' : 'selectSmartTasksTreeItem(this)'}">
+                            <span class="codicon \${item.icon}"></span>
+                            <span class="tree-item-label">\${item.command}</span>
+                            \${childrenHtml}
+                        </div>
+                    \`;
+                }).join('');
+            }
+
+            // Helper function to recursively render menu items
+            function renderMenuItem(item) {
+                const hasSubcommands = item.subcommands && item.subcommands.length > 0;
+                const hasContent = hasSubcommands || item.shellCmd; // Check if it has subcommands or a command
+                const encodedCmd = encodeShellCmd(item.shellCmd || item.command); // Use command as fallback for root
+                return \`
+                    <div class="tree-item" data-id="\${encodedCmd}" \${item.shellCmd ? \`onclick="executeTreeItemCommand(event, '\${encodedCmd}')"\` : ''}>
+                        \${hasSubcommands ? 
+                            \`<button class="toggle-subcommands" onclick="toggleSubcommands(event, '\${encodedCmd}')">></button>\` : 
+                            '<span style="width: 16px;"></span>'}
+                        \${item.shellCmd ? \`<span class="codicon \${item.icon}"></span>\` : ''}
+                        <span class="tree-item-label">\${item.command}</span>
+                        \${hasSubcommands ? \`
+                            <div class="subcommands" id="subcommands-\${encodedCmd}">
+                                \${item.subcommands.map(sub => renderMenuItem(sub)).join('')}
+                            </div>
+                        \` : ''}
+                    </div>
+                \`;
+            }
+
+            function updateSmartTasksTreeView(projectName, projectIconUri, items) {
+                const projectNameSpan = document.getElementById('projectNameSpan');
+                if (projectNameSpan) {
+                    projectNameSpan.innerHTML = projectName;
+                }
+
+                if (projectIconUri) {
+                    const headerIcon = document.getElementById('headerIcon');
+                    if (headerIcon) {
+                        headerIcon.src = projectIconUri;
+                    }
+                }
+                }
+
+                const treeView = document.getElementById('smartTasksTreeView');
+                if (!items || !Array.isArray(items)) {
+                    treeView.innerHTML = '';
+                    return;
+                }
+
+                // Use the recursive helper function to render all items
+                const itemsHtml = items.map(item => renderMenuItem(item)).join('');
+                treeView.innerHTML = itemsHtml;
+            }
+
+            function toggleSubcommands(event, encodedCmd) {
+                event.stopPropagation(); // Prevent the click from bubbling up
+                const button = event.target;
+                const parentItem = button.closest('.tree-item');
+                const subcommandsContainer = parentItem.querySelector('.subcommands');
+                
+                if (subcommandsContainer) {
+                    const isHidden = subcommandsContainer.classList.toggle('hidden');
+                    button.textContent = isHidden ? '>' : 'v';
+                }
+            }
+
+            function executeTreeItemCommand(event, encodedCmd) {
+                event.stopPropagation();
+                vscode.postMessage({
+                    command: 'smartTasksTreeItemSelected',
+                    shellCmd: encodedCmd
+                });
+            }
+
+            function selectSmartTasksTreeItem(element) {
+                //console.log('selectSmartTasksTreeItem', element);
+                document.querySelectorAll('.tree-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                element.classList.add('selected');
+
+                vscode.postMessage({
+                    command: 'smartTasksTreeItemSelected',
+                    shellCmd: element.dataset.id
+                });
+            }
+
+            function stageFile(filePath) {
+                vscode.postMessage({
+                    command: 'stage',
+                    files: [filePath]
+                });
+            }
+
+            function unstageFile(filePath) {
+                vscode.postMessage({
+                    command: 'unstage',
+                    files: [filePath]
+                });
+            }
+
+            function discardFile(filePath) {
+                showModal(
+                    () => {
+                        vscode.postMessage({
+                            command: 'discard',
+                            files: [filePath]
+                        });
+                    },
+                    'Are you sure you want to discard changes in this file?'
+                );
+            }
+
+            function updateRepositoryAndBranchLists(repositories, branches, currentRepo, currentBranch) {
+                const repoSelect = document.getElementById('repoSelect');
+                const branchSelect = document.getElementById('branchSelect');
+
+                // Update repository list
+                if (repoSelect) {
+                    repoSelect.innerHTML = repositories.map(repo => 
+                        '<option value="' + repo.path + '" title="' + repo.path + ' -> ' + (repo.originUri || 'None') + '" ' + 
+                        (repo.path === currentRepo ? 'selected' : '') + '>' +
+                        repo.name +
+                        '</option>'
+                    ).join('');
+                }
+
+                // Update branch list
+                if (branchSelect) {
+                    // First check if current branch exists in the list
+                    const branchExists = branches.some(branch => branch.name === currentBranch);
+                    
+                    branchSelect.innerHTML = '<option value="" disabled ' + (!branchExists ? 'selected' : '') + '>Select Branch</option>' +
+                        branches.map(branch => 
+                            '<option value="' + branch.name + '" ' + 
+                            (branch.name === currentBranch && branchExists ? 'selected' : '') + '>' +
+                            branch.name +
+                            '</option>'
+                        ).join('');
+
+                    // Add or remove the no-branch-selected class based on selection
+                    if (!branchExists) {
+                        branchSelect.classList.add('no-branch-selected');
+                    } else {
+                        branchSelect.classList.remove('no-branch-selected');
+                    }
+                }
+            }
+
+            // Add repository and branch change handlers
+            document.getElementById('repoSelect')?.addEventListener('change', function(e) {
+                vscode.postMessage({
+                    command: 'switchRepository',
+                    path: e.target.value
+                });
+            });
+
+            document.getElementById('branchSelect')?.addEventListener('change', function(e) {
+                vscode.postMessage({
+                    command: 'switchBranch',
+                    branch: e.target.value
+                });
+            });
+
+            let pendingAction = null;
+
+            function showModal(action, message) {
+                pendingAction = action;
+                document.getElementById('modalContent').textContent = message;
+                document.getElementById('confirmModal').style.display = 'block';
+            }
+
+            function closeModal() {
+                pendingAction = null;
+                document.getElementById('confirmModal').style.display = 'none';
+            }
+
+            function confirmModal() {
+                if (pendingAction) {
+                    pendingAction();
+                }
+                closeModal();
+            }
+
+            function stageAllFiles() {
+                const changesTree = document.getElementById('changesTree');
+                if (changesTree) {
+                    const fileItems = Array.from(changesTree.querySelectorAll('.file-item'));
+                    const files = fileItems
+                        .map(item => item.querySelector('.file-name')?.getAttribute('title'))
+                        .filter(path => path); // Filter out any undefined/null values
+                    
+                    if (files.length > 0) {
+                        vscode.postMessage({
+                            command: 'stage',
+                            files: files
+                        });
+                    }
+                }
+            }
+
+            function unstageAllFiles() {
+                const stagedTree = document.getElementById('stagedTree');
+                if (stagedTree) {
+                    const fileItems = Array.from(stagedTree.querySelectorAll('.file-item'));
+                    const files = fileItems
+                        .map(item => item.querySelector('.file-name')?.getAttribute('title'))
+                        .filter(path => path); // Filter out any undefined/null values
+                    
+                    if (files.length > 0) {
+                        vscode.postMessage({
+                            command: 'unstage',
+                            files: files
+                        });
+                    }
+                }
+            }
+
+            function discardAllFiles() {
+                const unstagedFiles = Array.from(document.querySelectorAll('#changesTree .file-item'))
+                    .map(item => item.getAttribute('data-file'));
+                if (unstagedFiles.length > 0) {
+                    showModal(
+                        () => vscode.postMessage({
+                            command: 'discard',
+                            files: unstagedFiles
+                        }),
+                        'Are you sure you want to discard changes in all files?'
+                    );
+                }
+            }
+
+            function viewAllChanges(isStaged) {
+                const files = Array.from(document.querySelectorAll(isStaged ? '#stagedTree .file-item' : '#changesTree .file-item'))
+                    .map(item => item.getAttribute('data-file'));
+
+                vscode.postMessage({
+                    command: 'viewAllChanges',
+                    files: files,
+                    isStaged: isStaged
+                });
+            }
+
+            function viewFileChanges(filePath, isStaged) {
+                vscode.postMessage({
+                    command: 'viewFileChanges',
+                    filePath: filePath,
+                    isStaged: isStaged
+                });
+            }
+
+            // Custom encode function to handle quotes
+            function encodeShellCmd(cmd) {
+                return cmd
+                    .replace(/'/g, '%27')  // Single quotes
+                    .replace(/"/g, '%22')  // Double quotes
+                    .replace(/\\\\/g, '%5C'); // Backslashes
+            }
+
+            let isTreeView = true;
+            function toggleViewMode() {
+                isTreeView = !isTreeView;
+                const todoTree = document.getElementById('todoTreeView');
+                const button = document.getElementById('viewToggleButton');
+                
+                if (isTreeView) {
+                    todoTree.classList.remove('list-view');
+                    todoTree.classList.add('tree-view');
+                    button.textContent = '🌳';
+                } else {
+                    todoTree.classList.remove('tree-view');
+                    todoTree.classList.add('list-view');
+                    button.textContent = '📝';
+                }
+                
+                // Refresh the current view
+                updateTodoTree(currentTodoItems);
+            }
+
+            let currentTodoItems = [];
+            function updateTodoTree(items) {
+                currentTodoItems = items;
+                const todoItems = document.getElementById('todoItems');
+                
+                if (isTreeView) {
+                    // Render as tree
+                    todoItems.innerHTML = renderTodoTree(items);
+                } else {
+                    // Render as list
+                    todoItems.innerHTML = renderTodoList(items);
+                }
+            }
+
+            function openTodoFile(filePath, line) {
+                // Send a message to the extension to open the file at the specified line
+                vscode.postMessage({
+                    command: 'openFile',
+                    filePath: filePath,
+                    line: line
+                });
+            }
+                        
+            function renderTodoTree(items, level = 0) {
+                return items.map(item => \`
+                    <div class="todo-item" style="margin-left: \${level * 20}px">
+                        <span class="todo-icon">📌</span>
+                        <span class="todo-text" title="\${item.file}:\${item.line}">\${item.text}</span>
+                        <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
+                        \${item.children ? renderTodoTree(item.children, level + 1) : ''}
+                    </div>
+                \`).join('');
+            }
+
+            function renderTodoList(items) {
+                return items.map(item => \`
+                    <div class="todo-item">
+                        <span class="todo-icon" title="\${item.file}:\${item.line}">📌</span>
+                        <span class="todo-text">\${item.text}</span>
+                        <button onclick="openTodoFile('\${item.file}', \${item.line})">Open</button>
+                    </div>
+                \`).join('');
+            }
+
+            function updateTasksStatus(status) {
+                const statusElement = document.getElementById('tasksStatus');
+                if (statusElement) {
+                    let statusText = \`\${status.total} tasks\`;
+                    let statusClass = '';
+                    
+                    if (status.running > 0) {
+                        statusText += \` (\${status.running} running)\`;
+                        statusClass = 'has-running';
+                    }
+                    if (status.failed > 0) {
+                        statusText += \` (\${status.failed} failed)\`;
+                        statusClass = 'has-error';
+                    }
+                    
+                    statusElement.textContent = statusText;
+                    statusElement.className = \`tasks-status \${statusClass}\`;
+                }
+            }
+
+            function toggleProjectTasks() {
+                const treeView = document.getElementById('smartTasksTreeView');
+                const header = document.getElementById('projectTasksHeader');
+                const toggleButton = header.querySelector('.toggle-subcommands');
+                const isHidden = treeView.classList.toggle('hidden');
+                toggleButton.textContent = isHidden ? '>' : 'v';
+            }
+
+            function toggleChanges(event) {
+                if (event) {
+                    event.stopPropagation();
+                }
+                const treeView = document.getElementById('changesTree');
+                const header = document.getElementById('changesHeader');
+                const toggleButton = header.querySelector('.toggle-subcommands');
+                const isHidden = treeView.classList.toggle('hidden');
+                toggleButton.textContent = isHidden ? '>' : 'v';
+            }
+
+            function toggleStaged(event) {
+                if (event) {
+                    event.stopPropagation();
+                }
+                const treeView = document.getElementById('stagedTree');
+                const header = document.getElementById('stagedHeader');
+                const toggleButton = header.querySelector('.toggle-subcommands');
+                const isHidden = treeView.classList.toggle('hidden');
+                toggleButton.textContent = isHidden ? '>' : 'v';
+            }
+
+            function toggleMerge(event) {
+                if (event) {
+                    event.stopPropagation();
+                }
+                const treeView = document.getElementById('mergeTree');
+                const header = document.getElementById('mergeHeader');
+                const toggleButton = header.querySelector('.toggle-subcommands');
+                const isHidden = treeView.classList.toggle('hidden');
+                toggleButton.textContent = isHidden ? '>' : 'v';
+            }
+
+            function viewAllMergeConflicts() {
+                const mergeTree = document.getElementById('mergeTree');
+                const files = Array.from(mergeTree.querySelectorAll('.file-item'))
+                    .map(item => item.querySelector('.file-name').textContent);
+                
+                vscode.postMessage({
+                    command: 'viewAllChanges',
+                    files: files,
+                    isConflicted: true
+                });
+            }
+
+            function openMergeEditor(filePath) {
+                vscode.postMessage({
+                    command: 'openMergeEditor',
+                    file: filePath
+                });
+            }
+            console.log(\`Script loaded\`);
+
+            // JavaScript to handle collapsible sections
+            document.querySelectorAll('.collapsible-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                });
+            });
+
+            document.getElementById('copyCommitButton').addEventListener('click', () => {
+                // Show dialog to select target branch
+                showBranchSelectionDialog('commit');
+            });
+
+            document.getElementById('copyStagedButton').addEventListener('click', () => {
+                // Show dialog to select target branch
+                showBranchSelectionDialog('staged');
+            });
+
+            function showBranchSelectionDialog(action) {
+                const branches = ['branch1', 'branch2', 'branch3']; // Replace with actual branch names
+                const currentBranch = 'currentBranch'; // Replace with the actual current branch name
+
+                // Create a dialog to select the target branch
+                const dialog = document.createElement('div');
+                dialog.innerHTML = \`
+                    <h3>Select Target Branch</h3>
+                    <select id="branchSelect">
+                        \${branches.filter(branch => branch !== currentBranch).map(branch => \`<option value="\${branch}">\${branch}</option>\`).join('')}
+                    </select>
+                    <button id="confirmButton">Confirm</button>
+                    <button id="cancelButton">Cancel</button>
+                \`;
+                document.body.appendChild(dialog);
+
+                document.getElementById('confirmButton').addEventListener('click', () => {
+                    const selectedBranch = document.getElementById('branchSelect').value;
+                    if (action === 'commit') {
+                        copyCommitToBranch(selectedBranch);
+                    } else if (action === 'staged') {
+                        copyStagedFilesToBranch(selectedBranch);
+                    }
+                    document.body.removeChild(dialog); // Remove dialog after selection
+                });
+
+                document.getElementById('cancelButton').addEventListener('click', () => {
+                    document.body.removeChild(dialog); // Remove dialog on cancel
+                });
+            }
+
+            async function copyCommitToBranch(branch: string) {
+                const git = simpleGit();
+                const commitMessage = 'Your commit message'; // You can prompt the user for this
+                const currentBranch = await git.branch().then(branches => branches.current); // Get the current branch
+
+                try {
+                    // Commit staged files
+                    await git.add('./*'); // Add all staged files
+                    await git.commit(commitMessage); // Commit the staged files
+                    vscode.window.showInformationMessage('Staged files committed successfully.');
+
+                    // Switch to the target branch
+                    await git.checkout(branch); // Switch to the target branch
+                    await git.pull(); // Update the branch with the latest changes
+
+                    // Logic to copy the committed files (e.g., cherry-pick the last commit)
+                    await git.cherryPick('HEAD'); // Cherry-pick the last commit
+                    vscode.window.showInformationMessage(\`Committed files copied to branch: \${branch}\`);
+
+                    // Restore the original branch
+                    await git.checkout(currentBranch); // Switch back to the original branch
+                    vscode.window.showInformationMessage(\`Switched back to branch: \${currentBranch}\`);
+                } catch (error) {
+                    if (error instanceof Error) {
+                        vscode.window.showErrorMessage(\`Failed to CherryPick: \${error.message}\`);
+                    } else {
+                        vscode.window.showErrorMessage('Failed to CherryPick: Unknown error occurred.');
+                    }
+                }
+            }
+
+            async function copyStagedFilesToBranch(branch: string) {
+                // Logic to copy staged files to the specified branch
+            }
+
+            document.getElementById('cherryPickButton').addEventListener('click', () => {
+                // Show dialog to select target branch
+                showBranchSelectionDialog();
+            });
+
+            async function commitStagedFiles() {
+                // Logic to commit staged files
+            }
+
+            async function copyCommittedFilesToBranch(branch: string) {
+                // Logic to copy committed files to the specified branch
+            }
+
+            function showBranchSelectionDialog() {
+                const branches = ['branch1', 'branch2', 'branch3']; // Replace with actual branch names
+                const currentBranch = 'currentBranch'; // Replace with the actual current branch name
+
+                // Create a dialog to select the target branch
+                const dialog = document.createElement('div');
+                dialog.innerHTML = \`
+                    <h3>Select Target Branch</h3>
+                    <select id="branchSelect">
+                        \${branches.filter(branch => branch !== currentBranch).map(branch => \`<option value="\${branch}">\${branch}</option>\`).join('')}
+                    </select>
+                    <button id="confirmButton">Confirm</button>
+                    <button id="cancelButton">Cancel</button>
+                \`;
+                document.body.appendChild(dialog);
+
+                document.getElementById('confirmButton').addEventListener('click', () => {
+                    const selectedBranch = document.getElementById('branchSelect').value;
+                    cherryPickToBranch(selectedBranch);
+                    document.body.removeChild(dialog); // Remove dialog after selection
+                });
+
+                document.getElementById('cancelButton').addEventListener('click', () => {
+                    document.body.removeChild(dialog); // Remove dialog on cancel
+                });
+            }
+
+            function cherryPickToBranch(branch) {
+                // Logic to commit staged files and copy to the selected branch
+                vscode.postMessage({ command: 'cherryPick', branch: branch });
+            }
+        </script>
+    </body>
+</html>

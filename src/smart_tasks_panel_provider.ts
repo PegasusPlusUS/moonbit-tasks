@@ -203,7 +203,7 @@ async function asyncRunCmdInTerminal(cmd: string, cwd: string, view:vscode.Webvi
 		myTerminal = vscode.window.createTerminal({
 			name: MB_TERMINAL_NAME,
 			shellPath: await helper.asyncGetShellPath(),
-			iconPath:new vscode.ThemeIcon('tools')
+			iconPath: vscode.ThemeIcon.File
 		});
 	}
 

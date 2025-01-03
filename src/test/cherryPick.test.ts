@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as myExtension from '../extension';
 
-suite('Commit and Copy Functionality', () => {
+suite('CherryPick Functionality', () => {
     let webview: vscode.WebviewPanel;
 
     before(async () => {
@@ -45,7 +45,7 @@ suite('Commit and Copy Functionality', () => {
                 <div id="changesHeader" class="collapsible-header">Changes Header</div>
                 <div id="changesContent" class="collapsible-content">
                     <div class="file-actions">
-                        <button class="action-button" id="commitAndCopyButton">Commit and Copy to Another Branch</button>
+                        <button class="action-button" id="cherryPickButton">CherryPick to Another Branch</button>
                     </div>
                 </div>
                 <div id="stagedHeader" class="collapsible-header">Staged Header</div>
@@ -55,7 +55,7 @@ suite('Commit and Copy Functionality', () => {
                     </div>
                 </div>
                 <script>
-                    document.getElementById('commitAndCopyButton').addEventListener('click', () => {
+                    document.getElementById('cherryPickButton').addEventListener('click', () => {
                         // Simulate showing the branch selection dialog
                         const branches = ['branch1', 'branch2', 'branch3'];
                         const dialog = document.createElement('div');
@@ -69,7 +69,7 @@ suite('Commit and Copy Functionality', () => {
                         \`;
                         document.body.appendChild(dialog);
                         document.getElementById('confirmButton').addEventListener('click', () => {
-                            // Simulate commit and copy action
+                            // Simulate CherryPick action
                             document.body.removeChild(dialog);
                         });
                     });
@@ -83,9 +83,9 @@ suite('Commit and Copy Functionality', () => {
         `;
     });
 
-    test('should have button to commit and copy staged file to another branch', async () => {
-        const button = webview.webview.html.includes('commitAndCopyButton');
-        assert.ok(button, 'Commit and Copy button should exist');
+    test('should have button to CherryPick staged file to another branch', async () => {
+        const button = webview.webview.html.includes('cherryPickButton');
+        assert.ok(button, 'CherryPick button should exist');
     });
 
     test('should have button to commit all staged files to another branch', async () => {
@@ -95,8 +95,8 @@ suite('Commit and Copy Functionality', () => {
 
     test('should show dialog to select target branch', async () => {
         // Simulate clicking the button to show the dialog
-        const button = webview.webview.html.includes('commitAndCopyButton');
-        assert.ok(button, 'Commit and Copy button should exist');
+        const button = webview.webview.html.includes('cherryPickButton');
+        assert.ok(button, 'CherryPick button should exist');
         // Simulate the button click
         // Here you would need to simulate the dialog being shown
     });
@@ -104,8 +104,8 @@ suite('Commit and Copy Functionality', () => {
     test('should commit single staged file and copy to selected branch', async () => {
         // Simulate the process of committing a single staged file
         const selectedBranch = 'branch1'; // Simulate selecting a branch
-        const button = webview.webview.html.includes('commitAndCopyButton');
-        assert.ok(button, 'Commit and Copy button should exist');
+        const button = webview.webview.html.includes('cherryPickButton');
+        assert.ok(button, 'CherryPick button should exist');
         // Simulate confirming the dialog
         // Here you would check if the commit function was called with the correct parameters
         assert.ok(true, 'Single staged file should be committed and copied to the selected branch');

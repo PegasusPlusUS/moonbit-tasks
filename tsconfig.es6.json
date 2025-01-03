@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "commonjs",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true, // This can help avoid type checking issues in node_modules
+        "forceConsistentCasingInFileNames": true
+    }
+}

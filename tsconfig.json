@@ -1,17 +1,20 @@
 {
 	"compilerOptions": {
-		"module": "Node16",
-		"target": "ES2022",
-		"outDir": "out",
-		"lib": [
-			"ES2022",
-			"es6",
-			"dom"
-		],
-		"sourceMap": true,
-		"rootDir": "src",
+		"target": "ES6",
+		"module": "commonjs",
 		"strict": true,
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"types": ["mocha", "vscode"],
+		"outDir": "./out",
+		"rootDir": "./src"
 	},
-	"include": ["src/**/*.ts", "test/**/*.ts"]
+	"include": [
+		"src/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"**/*.spec.ts"
+	]
 }

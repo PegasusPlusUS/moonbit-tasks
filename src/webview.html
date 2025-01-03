@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Tasks</title>
+    <link href="${codiconsUri}" rel="stylesheet" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .title-bar {
+            background-color: #007acc;
+            color: white;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .view-toggle-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .dropdown-container {
+            display: flex;
+            align-items: center;
+        }
+        .select-control {
+            margin-left: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .collapsible-header {
+            background-color: #e7e7e7;
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+        }
+        .collapsible-content {
+            display: none;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+        .action-button {
+            margin: 5px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007acc;
+            color: white;
+            cursor: pointer;
+        }
+        .action-button:hover {
+            background-color: #005f99;
+        }
+        .commit-message-input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .git-operation-result {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #e7f3fe;
+            color: #31708f;
+            display: none; /* Hidden by default */
+        }
+    </style>
+</head>
+<body>
+    <div class="title-bar">
+        <button id="viewToggleButton" class="view-toggle-button" onclick="toggleViewMode()" title="Toggle Tree/List View">
+            🌳
+        </button>
+        <div class="dropdown-container">
+            <select id="repoSelect" class="select-control" title="Select Repository">
+                <!-- Repositories will be populated here -->
+            </select>
+            <span id="branchIcon" class="codicon codicon-git-branch"></span>
+            <select id="branchSelect" class="select-control" title="Select Branch">
+                <!-- Branches will be populated here -->
+            </select>
+        </div>
+    </div>
+
+    <!-- Project Tasks Container -->
+    <div id="projectTasksHeader" class="collapsible-header">Project Tasks</div>
+    <div id="projectTasksContent" class="collapsible-content">
+        <!-- Project tasks will be populated here -->
+    </div>
+
+    <!-- Git Container -->
+    <div id="gitContainer">
+        <div id="changesHeader" class="collapsible-header">Changes</div>
+        <div id="changesContent" class="collapsible-content">
+            <div class="file-actions">
+                <button class="action-button" id="cherryPickButton">CherryPick to Another Branch</button>
+            </div>
+        </div>
+        <div id="stagedHeader" class="collapsible-header">Staged Changes</div>
+        <div id="stagedContent" class="collapsible-content">
+            <div class="file-actions">
+                <button class="action-button" id="commitAllStagedButton">Commit All Staged Files</button>
+                <input type="text" id="commitMessageInput" class="commit-message-input" placeholder="Enter commit message" />
+            </div>
+        </div>
+        <div id="mergeConflictsHeader" class="collapsible-header">Merge Conflicts</div>
+        <div id="mergeConflictsContent" class="collapsible-content">
+            <div class="file-actions">
+                <p>No merge conflicts detected.</p> <!-- Placeholder for merge conflicts -->
+            </div>
+        </div>
+        <div class="git-operation-result" id="gitOperationResultPopup">
+            <!-- Git operation result messages will be displayed here -->
+        </div>
+    </div>
+
+    <!-- TODO Container -->
+    <div id="todoHeader" class="collapsible-header">TODO</div>
+    <div id="todoContent" class="collapsible-content">
+        <!-- TODO items will be populated here -->
+    </div>
+
+    <script>
+        document.getElementById('cherryPickButton').addEventListener('click', () => {
+            // Logic to show branch selection dialog
+        });
+
+        document.getElementById('commitAllStagedButton').addEventListener('click', () => {
+            const commitMessage = document.getElementById('commitMessageInput').value;
+            const resultPopup = document.getElementById('gitOperationResultPopup');
+            // Simulate a git operation and show result
+            if (commitMessage) {
+                resultPopup.textContent = `Commit successful: "${commitMessage}"`;
+                resultPopup.style.display = 'block';
+            } else {
+                resultPopup.textContent = 'Commit failed: Please enter a commit message.';
+                resultPopup.style.display = 'block';
+            }
+        });
+
+        // Add functionality for collapsible headers
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                content.style.display = content.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+    </script>
+</body>
+</html> 
